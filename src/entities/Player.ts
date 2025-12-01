@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import type { PlayerStats, FireballType } from '../types';
+import type { TouchInputState } from '../ui/TouchControls';
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   public stats: PlayerStats;
@@ -10,6 +11,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private maxChargeTime: number = 1000;
   private chargeIndicator: Phaser.GameObjects.Graphics;
   private facingRight: boolean = true;
+
+  // Touch input state
+  private touchInput: TouchInputState | null = null;
+  private wasShootPressed: boolean = false;
 
   constructor(
     scene: Phaser.Scene,
@@ -49,15 +54,24 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.regenerateEnergy(delta);
   }
 
+  public setTouchInput(touchInput: TouchInputState): void {
+    this.touchInput = touchInput;
+  }
+
   private handleMovement(): void {
     const body = this.body as Phaser.Physics.Arcade.Body;
 
+    // Check keyboard and touch input
+    const leftPressed = this.cursors.left.isDown || this.touchInput?.left;
+    const rightPressed = this.cursors.right.isDown || this.touchInput?.right;
+    const jumpPressed = this.cursors.up.isDown || this.touchInput?.jump;
+
     // Horizontal movement
-    if (this.cursors.left.isDown) {
+    if (leftPressed) {
       this.setVelocityX(-this.stats.speed);
       this.facingRight = false;
       this.setFlipX(true);
-    } else if (this.cursors.right.isDown) {
+    } else if (rightPressed) {
       this.setVelocityX(this.stats.speed);
       this.facingRight = true;
       this.setFlipX(false);
@@ -66,14 +80,19 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     // Jumping
-    if (this.cursors.up.isDown && body.onFloor()) {
+    if (jumpPressed && body.onFloor()) {
       this.setVelocityY(-this.stats.jumpPower);
       this.scene.events.emit('playerJump');
     }
   }
 
   private handleCharging(delta: number): void {
-    if (this.spaceKey.isDown && !this.isCharging && this.stats.energy >= 5) {
+    // Check keyboard and touch input for shooting
+    const shootPressed = this.spaceKey.isDown || this.touchInput?.shoot;
+    const shootJustReleased = Phaser.Input.Keyboard.JustUp(this.spaceKey) ||
+      (this.wasShootPressed && !this.touchInput?.shoot);
+
+    if (shootPressed && !this.isCharging && this.stats.energy >= 5) {
       this.isCharging = true;
       this.chargeTime = 0;
     }
@@ -82,11 +101,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       this.chargeTime = Math.min(this.chargeTime + delta, this.maxChargeTime);
     }
 
-    if (Phaser.Input.Keyboard.JustUp(this.spaceKey) && this.isCharging) {
+    if (shootJustReleased && this.isCharging) {
       this.shoot();
       this.isCharging = false;
       this.chargeTime = 0;
     }
+
+    // Track previous shoot state for touch
+    this.wasShootPressed = this.touchInput?.shoot ?? false;
   }
 
   private shoot(): void {

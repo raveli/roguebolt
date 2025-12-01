@@ -32,6 +32,13 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
   parent: 'game-container',
   pixelArt: true,
   backgroundColor: COLORS.background,
+  scale: {
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH,
+  },
+  input: {
+    activePointers: 4, // Support multiple touch points
+  },
   physics: {
     default: 'arcade',
     arcade: {

@@ -53,12 +53,13 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
   }
 
   update(): void {
-    // Check if off screen
+    // Check if off level bounds (use physics world bounds)
+    const bounds = this.scene.physics.world.bounds;
     if (
-      this.x < -50 ||
-      this.x > this.scene.scale.width + 50 ||
-      this.y < -50 ||
-      this.y > this.scene.scale.height + 50
+      this.x < bounds.x - 50 ||
+      this.x > bounds.x + bounds.width + 50 ||
+      this.y < bounds.y - 50 ||
+      this.y > bounds.y + bounds.height + 50
     ) {
       this.destroy();
     }

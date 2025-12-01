@@ -7,6 +7,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   private startX: number;
   private moveSpeed: number = 80;
   private movingRight: boolean = true;
+  private hasLanded: boolean = false;
 
   constructor(
     scene: Phaser.Scene,
@@ -28,13 +29,24 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.setSize(28, 28);
     body.setOffset(2, 2);
-
-    // Start moving
-    this.setVelocityX(this.moveSpeed);
   }
 
   update(): void {
-    this.patrol();
+    const body = this.body as Phaser.Physics.Arcade.Body;
+
+    // Start patrolling once landed on a platform
+    if (!this.hasLanded && body.onFloor()) {
+      this.hasLanded = true;
+      this.startX = this.x; // Update start position to where we landed
+      // Random initial direction
+      this.movingRight = Math.random() > 0.5;
+      this.setVelocityX(this.movingRight ? this.moveSpeed : -this.moveSpeed);
+      this.setFlipX(!this.movingRight);
+    }
+
+    if (this.hasLanded) {
+      this.patrol();
+    }
   }
 
   private patrol(): void {
@@ -42,9 +54,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     if (this.movingRight && this.x >= this.startX + this.patrolDistance) {
       this.movingRight = false;
       this.setVelocityX(-this.moveSpeed);
+      this.setFlipX(true);
     } else if (!this.movingRight && this.x <= this.startX - this.patrolDistance) {
       this.movingRight = true;
       this.setVelocityX(this.moveSpeed);
+      this.setFlipX(false);
     }
 
     // Also reverse if hitting a wall
@@ -52,9 +66,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     if (body.blocked.left) {
       this.movingRight = true;
       this.setVelocityX(this.moveSpeed);
+      this.setFlipX(false);
     } else if (body.blocked.right) {
       this.movingRight = false;
       this.setVelocityX(-this.moveSpeed);
+      this.setFlipX(true);
     }
   }
 

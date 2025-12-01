@@ -58,4 +58,5 @@ export interface GameState {
   currentLevel: number;
   playerStats: PlayerStats;
   collectedUpgrades: string[];
+  godMode?: boolean;
 }

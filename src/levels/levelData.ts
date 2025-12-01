@@ -132,6 +132,97 @@ export const LEVELS: LevelData[] = [
     playerStart: { x: 100, y: GAME_HEIGHT - 100 },
     exit: { x: 1175, y: 36 },
   },
+
+  // Level 4 - Long scrolling level "The Journey"
+  {
+    id: 4,
+    name: 'Matka',
+    width: 3840, // Triple width - 3 screens
+    height: GAME_HEIGHT,
+    platforms: [
+      // === START ZONE (0-500px) ===
+      // Ground
+      { x: 0, y: GAME_HEIGHT - 32, width: 400, height: 32 },
+      // Easy stepping stones
+      { x: 300, y: 550, width: 120, height: 20 },
+      { x: 480, y: 480, width: 120, height: 20 },
+
+      // === EARLY ZONE (500-1500px) ===
+      // Platforming section
+      { x: 650, y: GAME_HEIGHT - 32, width: 200, height: 32 },
+      { x: 700, y: 400, width: 100, height: 20 },
+      { x: 880, y: 320, width: 100, height: 20 },
+      { x: 1050, y: 400, width: 120, height: 20 },
+      { x: 1200, y: 500, width: 150, height: 20 },
+      { x: 1380, y: 420, width: 100, height: 20 },
+
+      // === MIDDLE ZONE (1500-2500px) ===
+      // Vertical climbing section
+      { x: 1550, y: 600, width: 100, height: 20 },
+      { x: 1700, y: 500, width: 100, height: 20 },
+      { x: 1550, y: 400, width: 100, height: 20 },
+      { x: 1700, y: 300, width: 100, height: 20 },
+      { x: 1850, y: 380, width: 120, height: 20 },
+      // Bridge section
+      { x: 2000, y: GAME_HEIGHT - 32, width: 300, height: 32 },
+      { x: 2100, y: 450, width: 150, height: 20 },
+      { x: 2300, y: 350, width: 100, height: 20 },
+
+      // === LATE ZONE (2500-3400px) ===
+      // Harder platforming
+      { x: 2500, y: 500, width: 80, height: 20 },
+      { x: 2650, y: 420, width: 80, height: 20 },
+      { x: 2800, y: 340, width: 80, height: 20 },
+      { x: 2950, y: 420, width: 100, height: 20 },
+      { x: 3100, y: 520, width: 100, height: 20 },
+      { x: 3250, y: 400, width: 100, height: 20 },
+
+      // === END ZONE (3400-3840px) ===
+      // Final approach
+      { x: 3400, y: GAME_HEIGHT - 32, width: 200, height: 32 },
+      { x: 3500, y: 500, width: 120, height: 20 },
+      { x: 3650, y: 350, width: 150, height: 20 },
+    ],
+    enemies: [
+      // Early zone
+      { type: 'basic', x: 750, y: 350, patrolDistance: 40 },
+      { type: 'basic', x: 1250, y: 450, patrolDistance: 60 },
+      // Middle zone
+      { type: 'basic', x: 1600, y: 350, patrolDistance: 40 },
+      { type: 'basic', x: 1750, y: 250, patrolDistance: 40 },
+      { type: 'basic', x: 2150, y: 400, patrolDistance: 60 },
+      // Late zone
+      { type: 'basic', x: 2700, y: 370, patrolDistance: 30 },
+      { type: 'basic', x: 3000, y: 370, patrolDistance: 40 },
+      { type: 'basic', x: 3300, y: 350, patrolDistance: 40 },
+    ],
+    lightnings: [
+      // Start zone
+      { x: 360, y: 500 },
+      { x: 540, y: 430 },
+      // Early zone
+      { x: 750, y: 350 },
+      { x: 930, y: 270 },
+      { x: 1110, y: 350 },
+      { x: 1275, y: 450 },
+      { x: 1430, y: 370 },
+      // Middle zone
+      { x: 1600, y: 550 },
+      { x: 1750, y: 450 },
+      { x: 1600, y: 350 },
+      { x: 2150, y: 400 },
+      { x: 2350, y: 300 },
+      // Late zone
+      { x: 2550, y: 450 },
+      { x: 2850, y: 290 },
+      { x: 3150, y: 470 },
+      // End zone
+      { x: 3550, y: 450 },
+      { x: 3700, y: 300 },
+    ],
+    playerStart: { x: 100, y: GAME_HEIGHT - 100 },
+    exit: { x: 3725, y: 286 },
+  },
 ];
 
 export function getLevelData(levelNumber: number): LevelData | null {

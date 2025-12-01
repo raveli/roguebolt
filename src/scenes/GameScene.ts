@@ -4,6 +4,7 @@ import { Fireball } from '../entities/Fireball';
 import { Lightning } from '../entities/Lightning';
 import { Enemy } from '../entities/Enemy';
 import { HUD } from '../ui/HUD';
+import { TouchControls } from '../ui/TouchControls';
 import { SoundGenerator } from '../audio/SoundGenerator';
 import { getLevelData, getTotalLevels } from '../levels/levelData';
 import { GAME_WIDTH, GAME_HEIGHT } from '../config';
@@ -17,6 +18,7 @@ export class GameScene extends Phaser.Scene {
   private fireballs!: Phaser.Physics.Arcade.Group;
   private exitPortal!: Phaser.GameObjects.Sprite;
   private hud!: HUD;
+  private touchControls!: TouchControls;
   private soundGenerator!: SoundGenerator;
   private gameState!: GameState;
   private levelData!: LevelData;
@@ -130,12 +132,18 @@ export class GameScene extends Phaser.Scene {
     // Create HUD
     this.hud = new HUD(this, this.gameState);
 
+    // Create touch controls (only visible on touch devices)
+    this.touchControls = new TouchControls(this);
+
     // Set up event listeners
     this.setupEventListeners();
 
     // Camera follow player
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
     this.cameras.main.setBounds(0, 0, this.levelData.width, this.levelData.height);
+
+    // Set physics world bounds to match level size
+    this.physics.world.setBounds(0, 0, this.levelData.width, this.levelData.height);
 
     // Show level name
     this.showLevelName();
@@ -144,13 +152,18 @@ export class GameScene extends Phaser.Scene {
   update(time: number, delta: number): void {
     if (this.levelComplete) return;
 
+    // Pass touch input to player
+    if (this.touchControls.isActive()) {
+      this.player.setTouchInput(this.touchControls.getInputState());
+    }
+
     this.player.update(delta);
 
     // Update parallax backgrounds
     this.updateParallaxBackground();
 
-    // Check if player fell off the map
-    if (this.player.y > GAME_HEIGHT + 50) {
+    // Check if player fell off the map (unless god mode)
+    if (this.player.y > GAME_HEIGHT + 50 && !this.gameState.godMode) {
       this.player.stats.health = 0;
       this.handlePlayerDeath();
     }
@@ -356,7 +369,7 @@ export class GameScene extends Phaser.Scene {
     player: Phaser.GameObjects.GameObject,
     enemy: Phaser.GameObjects.GameObject
   ): void {
-    if (this.isInvulnerable || this.levelComplete) return;
+    if (this.isInvulnerable || this.levelComplete || this.gameState.godMode) return;
 
     const p = player as Player;
     const e = enemy as Enemy;
@@ -479,13 +492,4 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  private showVictory(): void {
-    // Transition to Victory scene
-    this.time.delayedCall(500, () => {
-      this.cameras.main.fadeOut(500, 255, 255, 200);
-      this.cameras.main.once('camerafadeoutcomplete', () => {
-        this.scene.start('VictoryScene', { gameState: this.gameState });
-      });
-    });
-  }
 }

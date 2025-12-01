@@ -4,6 +4,8 @@ import type { GameState } from '../types';
 
 export class MenuScene extends Phaser.Scene {
   private music!: Phaser.Sound.BaseSound;
+  private cheatBuffer: string = '';
+  private godMode: boolean = false;
 
   constructor() {
     super({ key: 'MenuScene' });
@@ -71,6 +73,46 @@ export class MenuScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-SPACE', () => {
       this.startGame();
     });
+
+    // Cheat code listener (iddqd = god mode)
+    this.cheatBuffer = '';
+    this.godMode = false;
+    this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
+      // Only track letter keys
+      if (event.key.length === 1 && event.key.match(/[a-z]/i)) {
+        this.cheatBuffer += event.key.toLowerCase();
+        // Keep only last 5 characters
+        if (this.cheatBuffer.length > 5) {
+          this.cheatBuffer = this.cheatBuffer.slice(-5);
+        }
+        // Check for iddqd
+        if (this.cheatBuffer === 'iddqd') {
+          this.godMode = true;
+          this.showCheatActivated();
+        }
+      }
+    });
+  }
+
+  private showCheatActivated(): void {
+    const cheatText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'GOD MODE ACTIVATED', {
+      fontSize: '48px',
+      color: '#ff0000',
+      fontFamily: 'monospace',
+      stroke: '#000000',
+      strokeThickness: 6,
+    });
+    cheatText.setOrigin(0.5);
+    cheatText.setAlpha(0);
+
+    this.tweens.add({
+      targets: cheatText,
+      alpha: 1,
+      duration: 200,
+      yoyo: true,
+      hold: 1000,
+      onComplete: () => cheatText.destroy(),
+    });
   }
 
   private startGame(): void {
@@ -78,6 +120,7 @@ export class MenuScene extends Phaser.Scene {
       currentLevel: 1,
       playerStats: { ...DEFAULT_PLAYER_STATS },
       collectedUpgrades: [],
+      godMode: this.godMode,
     };
 
     this.scene.start('GameScene', { gameState: initialState });
