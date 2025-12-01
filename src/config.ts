@@ -3,6 +3,8 @@ import { BootScene } from './scenes/BootScene';
 import { MenuScene } from './scenes/MenuScene';
 import { GameScene } from './scenes/GameScene';
 import { CardSelectScene } from './scenes/CardSelectScene';
+import { GameOverScene } from './scenes/GameOverScene';
+import { VictoryScene } from './scenes/VictoryScene';
 
 export const GAME_WIDTH = 1280;
 export const GAME_HEIGHT = 720;
@@ -37,7 +39,7 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
       debug: false,
     },
   },
-  scene: [BootScene, MenuScene, GameScene, CardSelectScene],
+  scene: [BootScene, MenuScene, GameScene, CardSelectScene, GameOverScene, VictoryScene],
 };
 
 export const DEFAULT_PLAYER_STATS = {

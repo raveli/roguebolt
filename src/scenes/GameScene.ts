@@ -58,8 +58,8 @@ export class GameScene extends Phaser.Scene {
     // Get level data
     const levelData = getLevelData(this.gameState.currentLevel);
     if (!levelData) {
-      // All levels complete - victory!
-      this.showVictory();
+      // All levels complete - go directly to victory scene
+      this.scene.start('VictoryScene', { gameState: this.gameState });
       return;
     }
     this.levelData = levelData;
@@ -425,7 +425,7 @@ export class GameScene extends Phaser.Scene {
 
       // Check if game is complete
       if (this.gameState.currentLevel > getTotalLevels()) {
-        this.scene.start('MenuScene'); // Victory - back to menu
+        this.scene.start('VictoryScene', { gameState: this.gameState });
       } else {
         this.scene.start('CardSelectScene', { gameState: this.gameState });
       }
@@ -442,38 +442,12 @@ export class GameScene extends Phaser.Scene {
     // Emit explosion at player position
     this.emitExplosion(this.player.x, this.player.y, 30);
 
-    // Show game over
-    const gameOverText = this.add.text(
-      GAME_WIDTH / 2,
-      GAME_HEIGHT / 2 - 50,
-      'GAME OVER',
-      {
-        fontSize: '64px',
-        color: '#ff4444',
-        fontFamily: 'monospace',
-        fontStyle: 'bold',
-      }
-    );
-    gameOverText.setOrigin(0.5);
-    gameOverText.setScrollFactor(0);
-    gameOverText.setDepth(100);
-
-    const restartText = this.add.text(
-      GAME_WIDTH / 2,
-      GAME_HEIGHT / 2 + 30,
-      'Paina ENTER aloittaaksesi alusta',
-      {
-        fontSize: '24px',
-        color: '#ffffff',
-        fontFamily: 'monospace',
-      }
-    );
-    restartText.setOrigin(0.5);
-    restartText.setScrollFactor(0);
-    restartText.setDepth(100);
-
-    this.input.keyboard?.once('keydown-ENTER', () => {
-      this.scene.start('MenuScene');
+    // Transition to Game Over scene after short delay
+    this.time.delayedCall(1000, () => {
+      this.cameras.main.fadeOut(500, 0, 0, 0);
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        this.scene.start('GameOverScene', { gameState: this.gameState });
+      });
     });
   }
 
@@ -506,33 +480,12 @@ export class GameScene extends Phaser.Scene {
   }
 
   private showVictory(): void {
-    const victoryText = this.add.text(
-      GAME_WIDTH / 2,
-      GAME_HEIGHT / 2 - 50,
-      'VOITIT PELIN!',
-      {
-        fontSize: '64px',
-        color: '#4a9eff',
-        fontFamily: 'monospace',
-        fontStyle: 'bold',
-      }
-    );
-    victoryText.setOrigin(0.5);
-
-    const restartText = this.add.text(
-      GAME_WIDTH / 2,
-      GAME_HEIGHT / 2 + 30,
-      'Paina ENTER palataksesi valikkoon',
-      {
-        fontSize: '24px',
-        color: '#ffffff',
-        fontFamily: 'monospace',
-      }
-    );
-    restartText.setOrigin(0.5);
-
-    this.input.keyboard?.once('keydown-ENTER', () => {
-      this.scene.start('MenuScene');
+    // Transition to Victory scene
+    this.time.delayedCall(500, () => {
+      this.cameras.main.fadeOut(500, 255, 255, 200);
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        this.scene.start('VictoryScene', { gameState: this.gameState });
+      });
     });
   }
 }
