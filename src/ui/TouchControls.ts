@@ -9,6 +9,12 @@ export interface TouchInputState {
   shootJustReleased: boolean;
 }
 
+// Safe area insets for notched devices (in game coordinates)
+// These are approximate values - the actual CSS safe-area-inset handles the real positioning
+const SAFE_AREA_LEFT = 50; // Extra padding for iPhone notch/Dynamic Island in landscape
+const SAFE_AREA_RIGHT = 50;
+const SAFE_AREA_BOTTOM = 20;
+
 export class TouchControls {
   private scene: Phaser.Scene;
   private container: Phaser.GameObjects.Container;
@@ -26,6 +32,7 @@ export class TouchControls {
   private shootBtn!: Phaser.GameObjects.Container;
 
   private isVisible: boolean = false;
+  private buttonSize: number = 70;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -36,9 +43,21 @@ export class TouchControls {
     // Check if touch device
     this.isVisible = this.isTouchDevice();
 
+    // Adjust button size based on screen density
+    this.buttonSize = this.calculateButtonSize();
+
     if (this.isVisible) {
       this.createButtons();
     }
+  }
+
+  private calculateButtonSize(): number {
+    // Scale buttons based on game height for different device sizes
+    // iPhone 15 Pro in landscape has a viewport height of ~393px (logical)
+    // Our game height is 720, so buttons should be proportionally sized
+    const baseSize = 70;
+    const scaleFactor = Math.min(1.2, Math.max(0.8, GAME_HEIGHT / 720));
+    return Math.round(baseSize * scaleFactor);
   }
 
   private isTouchDevice(): boolean {
@@ -50,13 +69,13 @@ export class TouchControls {
   }
 
   private createButtons(): void {
-    const buttonSize = 70;
+    const buttonSize = this.buttonSize;
     const padding = 20;
-    const bottomY = GAME_HEIGHT - buttonSize / 2 - padding;
+    const bottomY = GAME_HEIGHT - buttonSize / 2 - padding - SAFE_AREA_BOTTOM;
 
-    // Left side - D-pad style movement
-    const leftX = padding + buttonSize / 2;
-    const rightX = padding + buttonSize * 1.8;
+    // Left side - D-pad style movement (with safe area padding for notch)
+    const leftX = SAFE_AREA_LEFT + padding + buttonSize / 2;
+    const rightX = SAFE_AREA_LEFT + padding + buttonSize * 1.8;
 
     // Left button
     this.leftBtn = this.createButton(leftX, bottomY, buttonSize, '◀');
@@ -66,9 +85,9 @@ export class TouchControls {
     this.rightBtn = this.createButton(rightX, bottomY, buttonSize, '▶');
     this.setupButtonInput(this.rightBtn, 'right');
 
-    // Right side - action buttons
-    const actionRightX = GAME_WIDTH - padding - buttonSize / 2;
-    const actionLeftX = GAME_WIDTH - padding - buttonSize * 1.8;
+    // Right side - action buttons (with safe area padding for notch)
+    const actionRightX = GAME_WIDTH - SAFE_AREA_RIGHT - padding - buttonSize / 2;
+    const actionLeftX = GAME_WIDTH - SAFE_AREA_RIGHT - padding - buttonSize * 1.8;
 
     // Jump button (right side, slightly higher)
     this.jumpBtn = this.createButton(

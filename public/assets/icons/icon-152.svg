@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 152 152" width="152" height="152">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e"/>
+      <stop offset="100%" style="stop-color:#0a0a0f"/>
+    </linearGradient>
+    <linearGradient id="bolt" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffdd00"/>
+      <stop offset="50%" style="stop-color:#ff6b35"/>
+      <stop offset="100%" style="stop-color:#ff2222"/>
+    </linearGradient>
+  </defs>
+  <rect width="152" height="152" rx="29" fill="url(#bg)"/>
+  <circle cx="76" cy="76" r="59.28" fill="none" stroke="#4a9eff" stroke-width="1.216" opacity="0.3"/>
+  <path d="M89.07199999999999 23.712 L53.504 74.176 L71.288 74.176 L59.432 128.28799999999998 L100.92800000000001 65.36 L80.104 65.36 L89.07199999999999 23.712 Z"
+        fill="url(#bolt)" stroke="#ffffff" stroke-width="1.216"/>
+</svg>
