@@ -71,12 +71,15 @@ document.addEventListener('touchmove', (e) => {
   }
 }, { passive: false });
 
-// Handle visibility change - pause/resume game audio
+// Handle visibility change - pause/resume game
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     game.sound.pauseAll();
+    // Trigger hidden event for pause handling
+    game.events.emit('hidden');
   } else {
     game.sound.resumeAll();
+    game.events.emit('visible');
   }
 });
 
