@@ -7,7 +7,30 @@ export interface TouchInputState {
   jump: boolean;
   shoot: boolean;
   shootJustReleased: boolean;
+  pause: boolean;
 }
+
+// Haptics helper - will use Capacitor when available
+const Haptics = {
+  impact: async (style: 'Light' | 'Medium' | 'Heavy' = 'Light') => {
+    try {
+      // Try Capacitor Haptics if available (using dynamic import for tree-shaking)
+      if ((window as any).Capacitor?.isNativePlatform?.()) {
+        const { Haptics: CapHaptics, ImpactStyle } = await import('@capacitor/haptics');
+        const impactStyle = style === 'Light' ? ImpactStyle.Light
+          : style === 'Medium' ? ImpactStyle.Medium
+          : ImpactStyle.Heavy;
+        await CapHaptics.impact({ style: impactStyle });
+      } else if (navigator.vibrate) {
+        // Fallback to basic vibration for web
+        const duration = style === 'Light' ? 10 : style === 'Medium' ? 20 : 30;
+        navigator.vibrate(duration);
+      }
+    } catch {
+      // Haptics not available, silently fail
+    }
+  }
+};
 
 // Safe area insets for notched devices (in game coordinates)
 // These are approximate values - the actual CSS safe-area-inset handles the real positioning
@@ -24,12 +47,14 @@ export class TouchControls {
     jump: false,
     shoot: false,
     shootJustReleased: false,
+    pause: false,
   };
 
   private leftBtn!: Phaser.GameObjects.Container;
   private rightBtn!: Phaser.GameObjects.Container;
   private jumpBtn!: Phaser.GameObjects.Container;
   private shootBtn!: Phaser.GameObjects.Container;
+  private pauseBtn!: Phaser.GameObjects.Container;
 
   private isVisible: boolean = false;
   private buttonSize: number = 70;
@@ -113,7 +138,54 @@ export class TouchControls {
     this.addLabel(actionRightX, bottomY - buttonSize * 0.6 + buttonSize / 2 + 15, 'JUMP');
     this.addLabel(actionLeftX, bottomY + buttonSize / 2 + 15, 'FIRE');
 
-    this.container.add([this.leftBtn, this.rightBtn, this.jumpBtn, this.shootBtn]);
+    // Pause button (top right)
+    const pauseSize = buttonSize * 0.6;
+    this.pauseBtn = this.createButton(
+      GAME_WIDTH - SAFE_AREA_RIGHT - padding - pauseSize / 2,
+      SAFE_AREA_BOTTOM + padding + pauseSize / 2,
+      pauseSize,
+      '❚❚',
+      0x666666
+    );
+    this.setupPauseButton(this.pauseBtn);
+
+    this.container.add([this.leftBtn, this.rightBtn, this.jumpBtn, this.shootBtn, this.pauseBtn]);
+  }
+
+  private setupPauseButton(button: Phaser.GameObjects.Container): void {
+    const hitArea = button.getAt(2) as Phaser.GameObjects.Arc;
+    const bg = button.getData('bg') as Phaser.GameObjects.Graphics;
+    const color = button.getData('color') as number;
+    const size = button.getData('size') as number;
+
+    hitArea.on('pointerdown', () => {
+      this.inputState.pause = true;
+      Haptics.impact('Light');
+
+      // Visual feedback
+      bg.clear();
+      bg.fillStyle(0xffffff, 0.5);
+      bg.fillCircle(0, 0, size / 2);
+      bg.lineStyle(3, 0xffffff, 0.9);
+      bg.strokeCircle(0, 0, size / 2);
+
+      this.scene.tweens.add({
+        targets: button,
+        scaleX: 0.9,
+        scaleY: 0.9,
+        duration: 50,
+        yoyo: true,
+      });
+    });
+
+    hitArea.on('pointerup', () => {
+      // Reset visual
+      bg.clear();
+      bg.fillStyle(color, 0.4);
+      bg.fillCircle(0, 0, size / 2);
+      bg.lineStyle(3, color, 0.8);
+      bg.strokeCircle(0, 0, size / 2);
+    });
   }
 
   private createButton(
@@ -155,47 +227,83 @@ export class TouchControls {
 
   private setupButtonInput(
     button: Phaser.GameObjects.Container,
-    inputKey: keyof Omit<TouchInputState, 'shootJustReleased'>
+    inputKey: keyof Omit<TouchInputState, 'shootJustReleased' | 'pause'>
   ): void {
     const hitArea = button.getAt(2) as Phaser.GameObjects.Arc;
     const bg = button.getData('bg') as Phaser.GameObjects.Graphics;
     const color = button.getData('color') as number;
     const size = button.getData('size') as number;
 
-    hitArea.on('pointerdown', () => {
-      this.inputState[inputKey] = true;
-      // Highlight effect
+    const drawPressed = () => {
       bg.clear();
-      bg.fillStyle(color, 0.7);
+      // Outer glow
+      bg.fillStyle(0xffffff, 0.15);
+      bg.fillCircle(0, 0, size / 2 + 8);
+      // Main button
+      bg.fillStyle(color, 0.8);
       bg.fillCircle(0, 0, size / 2);
       bg.lineStyle(4, 0xffffff, 0.9);
       bg.strokeCircle(0, 0, size / 2);
-      button.setScale(1.1);
+    };
+
+    const drawNormal = () => {
+      bg.clear();
+      bg.fillStyle(color, 0.4);
+      bg.fillCircle(0, 0, size / 2);
+      bg.lineStyle(3, color, 0.8);
+      bg.strokeCircle(0, 0, size / 2);
+    };
+
+    hitArea.on('pointerdown', () => {
+      this.inputState[inputKey] = true;
+
+      // Haptic feedback
+      Haptics.impact(inputKey === 'shoot' ? 'Medium' : 'Light');
+
+      // Visual feedback with glow
+      drawPressed();
+
+      // Smooth scale animation
+      this.scene.tweens.add({
+        targets: button,
+        scaleX: 1.15,
+        scaleY: 1.15,
+        duration: 80,
+        ease: 'Back.easeOut',
+      });
     });
 
     hitArea.on('pointerup', () => {
       this.inputState[inputKey] = false;
       if (inputKey === 'shoot') {
         this.inputState.shootJustReleased = true;
+        // Stronger haptic on shoot release
+        Haptics.impact('Heavy');
       }
-      // Reset effect
-      bg.clear();
-      bg.fillStyle(color, 0.4);
-      bg.fillCircle(0, 0, size / 2);
-      bg.lineStyle(3, color, 0.8);
-      bg.strokeCircle(0, 0, size / 2);
-      button.setScale(1);
+
+      // Reset visual
+      drawNormal();
+
+      // Smooth scale back
+      this.scene.tweens.add({
+        targets: button,
+        scaleX: 1,
+        scaleY: 1,
+        duration: 100,
+        ease: 'Back.easeIn',
+      });
     });
 
     hitArea.on('pointerout', () => {
       this.inputState[inputKey] = false;
-      // Reset effect
-      bg.clear();
-      bg.fillStyle(color, 0.4);
-      bg.fillCircle(0, 0, size / 2);
-      bg.lineStyle(3, color, 0.8);
-      bg.strokeCircle(0, 0, size / 2);
-      button.setScale(1);
+      drawNormal();
+
+      this.scene.tweens.add({
+        targets: button,
+        scaleX: 1,
+        scaleY: 1,
+        duration: 100,
+      });
     });
   }
 
@@ -216,6 +324,10 @@ export class TouchControls {
 
   public clearShootJustReleased(): void {
     this.inputState.shootJustReleased = false;
+  }
+
+  public clearPause(): void {
+    this.inputState.pause = false;
   }
 
   public isActive(): boolean {

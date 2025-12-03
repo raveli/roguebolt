@@ -7,7 +7,7 @@ import { HUD } from '../ui/HUD';
 import { TouchControls } from '../ui/TouchControls';
 import { SoundGenerator } from '../audio/SoundGenerator';
 import { getLevelData, getTotalLevels } from '../levels/levelData';
-import { GAME_WIDTH, GAME_HEIGHT } from '../config';
+import { GAME_WIDTH, GAME_HEIGHT, PERFORMANCE_SETTINGS } from '../config';
 import type { GameState, LevelData, FireballType } from '../types';
 
 export class GameScene extends Phaser.Scene {
@@ -24,6 +24,7 @@ export class GameScene extends Phaser.Scene {
   private levelData!: LevelData;
   private levelComplete: boolean = false;
   private isInvulnerable: boolean = false;
+  private isPaused: boolean = false;
 
   // Parallax backgrounds
   private bgLayers: Phaser.GameObjects.TileSprite[] = [];
@@ -138,6 +139,9 @@ export class GameScene extends Phaser.Scene {
     // Set up event listeners
     this.setupEventListeners();
 
+    // Set up pause input
+    this.setupPauseInput();
+
     // Camera follow player
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
     this.cameras.main.setBounds(0, 0, this.levelData.width, this.levelData.height);
@@ -150,11 +154,16 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(time: number, delta: number): void {
-    if (this.levelComplete) return;
+    if (this.levelComplete || this.isPaused) return;
 
-    // Pass touch input to player
+    // Check for touch pause button
     if (this.touchControls.isActive()) {
-      this.player.setTouchInput(this.touchControls.getInputState());
+      const touchInput = this.touchControls.getInputState();
+      if (touchInput.pause) {
+        this.pauseGame();
+        return;
+      }
+      this.player.setTouchInput(touchInput);
     }
 
     this.player.update(delta);
@@ -242,22 +251,26 @@ export class GameScene extends Phaser.Scene {
     this.energyEmitter.setDepth(20);
   }
 
-  // Public methods for particle effects
-  public emitSparks(x: number, y: number, count: number = 15): void {
-    this.sparkEmitter.emitParticleAt(x, y, count);
+  // Public methods for particle effects (using mobile-optimized counts)
+  public emitSparks(x: number, y: number, count?: number): void {
+    const finalCount = count ?? PERFORMANCE_SETTINGS.sparkCount;
+    this.sparkEmitter.emitParticleAt(x, y, finalCount);
   }
 
-  public emitExplosion(x: number, y: number, count: number = 20): void {
-    this.explosionEmitter.emitParticleAt(x, y, count);
+  public emitExplosion(x: number, y: number, count?: number): void {
+    const finalCount = count ?? PERFORMANCE_SETTINGS.explosionCount;
+    this.explosionEmitter.emitParticleAt(x, y, finalCount);
   }
 
-  public emitEnergy(x: number, y: number, count: number = 10): void {
-    this.energyEmitter.emitParticleAt(x, y, count);
+  public emitEnergy(x: number, y: number, count?: number): void {
+    const finalCount = count ?? PERFORMANCE_SETTINGS.energyCount;
+    this.energyEmitter.emitParticleAt(x, y, finalCount);
   }
 
-  // Screen shake effect
+  // Screen shake effect (reduced on mobile)
   public screenShake(intensity: number = 5, duration: number = 150): void {
-    this.cameras.main.shake(duration, intensity / 1000);
+    const adjustedIntensity = intensity * PERFORMANCE_SETTINGS.shakeIntensity;
+    this.cameras.main.shake(duration, adjustedIntensity / 1000);
   }
 
   private buildLevel(): void {
@@ -490,6 +503,47 @@ export class GameScene extends Phaser.Scene {
         levelText.destroy();
       },
     });
+  }
+
+  private setupPauseInput(): void {
+    // ESC key to pause
+    this.input.keyboard?.on('keydown-ESC', () => {
+      if (!this.levelComplete && !this.isPaused) {
+        this.pauseGame();
+      }
+    });
+
+    // Listen for visibility change (app backgrounded)
+    this.game.events.on('hidden', () => {
+      if (!this.levelComplete && !this.isPaused) {
+        this.pauseGame();
+      }
+    });
+
+    // Resume when coming back from pause scene
+    this.events.on('resume', () => {
+      this.isPaused = false;
+      // Resume physics and tweens
+      this.physics.resume();
+      this.tweens.resumeAll();
+      // Reset touch pause state
+      if (this.touchControls.isActive()) {
+        this.touchControls.clearPause();
+      }
+    });
+  }
+
+  private pauseGame(): void {
+    if (this.isPaused) return;
+    this.isPaused = true;
+
+    // Pause physics and tweens
+    this.physics.pause();
+    this.tweens.pauseAll();
+
+    // Launch pause scene on top
+    this.scene.launch('PauseScene', { returnScene: 'GameScene' });
+    this.scene.pause();
   }
 
 }

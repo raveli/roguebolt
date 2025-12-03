@@ -5,6 +5,7 @@ import { GameScene } from './scenes/GameScene';
 import { CardSelectScene } from './scenes/CardSelectScene';
 import { GameOverScene } from './scenes/GameOverScene';
 import { VictoryScene } from './scenes/VictoryScene';
+import { PauseScene } from './scenes/PauseScene';
 
 export const GAME_WIDTH = 1280;
 export const GAME_HEIGHT = 720;
@@ -46,7 +47,7 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
       debug: false,
     },
   },
-  scene: [BootScene, MenuScene, GameScene, CardSelectScene, GameOverScene, VictoryScene],
+  scene: [BootScene, MenuScene, GameScene, CardSelectScene, GameOverScene, VictoryScene, PauseScene],
 };
 
 export const DEFAULT_PLAYER_STATS = {
@@ -58,4 +59,24 @@ export const DEFAULT_PLAYER_STATS = {
   energy: 100,
   energyRegen: 0,
   damage: 10,
+};
+
+// Mobile detection helper
+export const isMobileDevice = (): boolean => {
+  return (
+    'ontouchstart' in window ||
+    navigator.maxTouchPoints > 0 ||
+    (window.matchMedia && window.matchMedia('(pointer: coarse)').matches)
+  );
+};
+
+// Performance settings based on device type
+export const PERFORMANCE_SETTINGS = {
+  // Particle counts
+  sparkCount: isMobileDevice() ? 8 : 15,
+  explosionCount: isMobileDevice() ? 12 : 25,
+  energyCount: isMobileDevice() ? 6 : 15,
+
+  // Screen shake intensity multiplier
+  shakeIntensity: isMobileDevice() ? 0.6 : 1.0,
 };
