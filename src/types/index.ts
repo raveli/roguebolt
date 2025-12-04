@@ -59,4 +59,15 @@ export interface GameState {
   playerStats: PlayerStats;
   collectedUpgrades: string[];
   godMode?: boolean;
+  score: number;
+  levelStartTime: number; // timestamp when level started
 }
+
+// Scoring constants
+export const SCORE_VALUES = {
+  ENEMY_KILL_SMALL: 100,    // Kill with small fireball
+  ENEMY_KILL_LARGE: 250,    // Kill with charged fireball
+  LIGHTNING_COLLECT: 50,     // Collect a lightning bolt
+  TIME_BONUS_PER_SECOND: 10, // Points per second remaining
+  LEVEL_TIME_LIMIT: 120,     // Seconds for max time bonus
+} as const;

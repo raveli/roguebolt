@@ -113,6 +113,9 @@ export class PauseScene extends Phaser.Scene {
         speed: 200,
         jumpPower: 350,
       };
+      // Reset score and timer for fresh start
+      gameState.score = 0;
+      gameState.levelStartTime = Date.now();
       this.scene.start('GameScene', { gameState });
     } else {
       this.scene.start('MenuScene');

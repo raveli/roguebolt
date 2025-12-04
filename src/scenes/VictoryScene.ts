@@ -1,9 +1,11 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT, DEFAULT_PLAYER_STATS } from '../config';
 import type { GameState } from '../types';
+import { saveHighScore, getHighScores } from '../utils/highScores';
 
 export class VictoryScene extends Phaser.Scene {
   private gameState!: GameState;
+  private scoreResult!: { rank: number; isNewHighScore: boolean };
 
   constructor() {
     super({ key: 'VictoryScene' });
@@ -11,6 +13,8 @@ export class VictoryScene extends Phaser.Scene {
 
   init(data: { gameState: GameState }): void {
     this.gameState = data.gameState;
+    // Save the score and get ranking
+    this.scoreResult = saveHighScore(this.gameState.score);
   }
 
   create(): void {
@@ -144,30 +148,84 @@ export class VictoryScene extends Phaser.Scene {
       delay: 400,
     });
 
-    // Stats
-    const upgradesCollected = this.gameState.collectedUpgrades.length;
-
-    const statsText = this.add.text(
+    // Final Score (big and prominent)
+    const scoreLabel = this.add.text(
       GAME_WIDTH / 2,
-      GAME_HEIGHT / 2 + 130,
-      `Upgrades Collected: ${upgradesCollected}`,
+      GAME_HEIGHT / 2 + 110,
+      'FINAL SCORE',
       {
-        fontSize: '22px',
-        color: '#aaffaa',
+        fontSize: '18px',
+        color: '#aaaaaa',
         fontFamily: 'monospace',
         stroke: '#000000',
-        strokeThickness: 3,
+        strokeThickness: 2,
       }
     );
-    statsText.setOrigin(0.5);
-    statsText.setAlpha(0);
+    scoreLabel.setOrigin(0.5);
+    scoreLabel.setAlpha(0);
+
+    const scoreText = this.add.text(
+      GAME_WIDTH / 2,
+      GAME_HEIGHT / 2 + 145,
+      `${this.gameState.score}`,
+      {
+        fontSize: '48px',
+        color: '#ffdd00',
+        fontFamily: 'monospace',
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 6,
+      }
+    );
+    scoreText.setOrigin(0.5);
+    scoreText.setAlpha(0);
 
     this.tweens.add({
-      targets: statsText,
+      targets: [scoreLabel, scoreText],
       alpha: 1,
       duration: 500,
       delay: 600,
     });
+
+    // New high score indicator
+    if (this.scoreResult.isNewHighScore) {
+      const newHighText = this.add.text(
+        GAME_WIDTH / 2,
+        GAME_HEIGHT / 2 + 185,
+        this.scoreResult.rank === 1 ? 'NEW HIGH SCORE!' : `#${this.scoreResult.rank} BEST!`,
+        {
+          fontSize: '24px',
+          color: '#ff4444',
+          fontFamily: 'monospace',
+          fontStyle: 'bold',
+          stroke: '#000000',
+          strokeThickness: 4,
+        }
+      );
+      newHighText.setOrigin(0.5);
+      newHighText.setAlpha(0);
+
+      this.tweens.add({
+        targets: newHighText,
+        alpha: 1,
+        duration: 300,
+        delay: 800,
+      });
+
+      // Pulsing effect on new high score text
+      this.tweens.add({
+        targets: newHighText,
+        scaleX: 1.1,
+        scaleY: 1.1,
+        duration: 400,
+        yoyo: true,
+        repeat: -1,
+        delay: 800,
+      });
+    }
+
+    // High scores list (right side)
+    this.showHighScores();
 
     // Buttons
     const buttonsY = GAME_HEIGHT / 2 + 220;
@@ -266,11 +324,67 @@ export class VictoryScene extends Phaser.Scene {
     return container;
   }
 
+  private showHighScores(): void {
+    const highScores = getHighScores();
+    if (highScores.length === 0) return;
+
+    const startX = GAME_WIDTH - 200;
+    const startY = 150;
+
+    const titleText = this.add.text(startX, startY, 'TOP SCORES', {
+      fontSize: '18px',
+      color: '#ffdd00',
+      fontFamily: 'monospace',
+      stroke: '#000000',
+      strokeThickness: 2,
+    });
+    titleText.setOrigin(0.5, 0);
+    titleText.setAlpha(0);
+
+    this.tweens.add({
+      targets: titleText,
+      alpha: 1,
+      duration: 500,
+      delay: 1000,
+    });
+
+    // Show top 5 scores
+    const displayScores = highScores.slice(0, 5);
+    displayScores.forEach((entry, index) => {
+      const isCurrentScore = entry.score === this.gameState.score && index === this.scoreResult.rank - 1;
+      const color = isCurrentScore ? '#ffff00' : '#ffffff';
+
+      const entryText = this.add.text(
+        startX,
+        startY + 30 + index * 25,
+        `${index + 1}. ${entry.score}`,
+        {
+          fontSize: '16px',
+          color: color,
+          fontFamily: 'monospace',
+          stroke: '#000000',
+          strokeThickness: 2,
+        }
+      );
+      entryText.setOrigin(0.5, 0);
+      entryText.setAlpha(0);
+
+      this.tweens.add({
+        targets: entryText,
+        alpha: 1,
+        duration: 300,
+        delay: 1100 + index * 100,
+      });
+    });
+  }
+
   private restartGame(): void {
     const initialState: GameState = {
       currentLevel: 1,
       playerStats: { ...DEFAULT_PLAYER_STATS },
       collectedUpgrades: [],
+      score: 0,
+      levelStartTime: Date.now(),
     };
     this.scene.start('GameScene', { gameState: initialState });
   }

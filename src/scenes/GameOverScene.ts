@@ -67,12 +67,12 @@ export class GameOverScene extends Phaser.Scene {
 
     // Stats
     const levelReached = this.gameState.currentLevel;
-    const upgradesCollected = this.gameState.collectedUpgrades.length;
+    const score = this.gameState.score;
 
     const statsText = this.add.text(
       GAME_WIDTH / 2,
-      GAME_HEIGHT / 2 + 100,
-      `Level Reached: ${levelReached}\nUpgrades Collected: ${upgradesCollected}`,
+      GAME_HEIGHT / 2 + 90,
+      `Kenttä: ${levelReached}`,
       {
         fontSize: '24px',
         color: '#cccccc',
@@ -85,9 +85,25 @@ export class GameOverScene extends Phaser.Scene {
     statsText.setOrigin(0.5);
     statsText.setAlpha(0);
 
+    const scoreText = this.add.text(
+      GAME_WIDTH / 2,
+      GAME_HEIGHT / 2 + 130,
+      `Pisteet: ${score}`,
+      {
+        fontSize: '32px',
+        color: '#ffdd00',
+        fontFamily: 'monospace',
+        align: 'center',
+        stroke: '#000000',
+        strokeThickness: 4,
+      }
+    );
+    scoreText.setOrigin(0.5);
+    scoreText.setAlpha(0);
+
     // Fade in stats
     this.tweens.add({
-      targets: statsText,
+      targets: [statsText, scoreText],
       alpha: 1,
       duration: 500,
       delay: 600,
@@ -200,6 +216,8 @@ export class GameOverScene extends Phaser.Scene {
       currentLevel: 1,
       playerStats: { ...DEFAULT_PLAYER_STATS },
       collectedUpgrades: [],
+      score: 0,
+      levelStartTime: Date.now(),
     };
     this.scene.start('GameScene', { gameState: initialState });
   }

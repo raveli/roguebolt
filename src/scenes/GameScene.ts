@@ -9,6 +9,7 @@ import { SoundGenerator } from '../audio/SoundGenerator';
 import { getLevelData, getTotalLevels } from '../levels/levelData';
 import { GAME_WIDTH, GAME_HEIGHT, PERFORMANCE_SETTINGS } from '../config';
 import type { GameState, LevelData, FireballType } from '../types';
+import { SCORE_VALUES } from '../types';
 
 export class GameScene extends Phaser.Scene {
   private player!: Player;
@@ -45,6 +46,8 @@ export class GameScene extends Phaser.Scene {
     this.gameState = data.gameState;
     this.levelComplete = false;
     this.bgLayers = [];
+    // Start level timer
+    this.gameState.levelStartTime = Date.now();
   }
 
   create(): void {
@@ -418,7 +421,19 @@ export class GameScene extends Phaser.Scene {
       this.screenShake(5, 150);
     }
 
+    // Check if this hit will kill the enemy
+    const willKill = e.health <= f.damage;
+
     e.takeDamage(f.damage);
+
+    // Award score if enemy was killed
+    if (willKill) {
+      const points = f.fireballType === 'large'
+        ? SCORE_VALUES.ENEMY_KILL_LARGE
+        : SCORE_VALUES.ENEMY_KILL_SMALL;
+      this.addScore(points, e.x, e.y);
+    }
+
     f.destroy();
   }
 
@@ -433,6 +448,10 @@ export class GameScene extends Phaser.Scene {
     this.emitEnergy(l.x, l.y, 15);
 
     p.collectEnergy(l.energyAmount);
+
+    // Award score for collecting lightning
+    this.addScore(SCORE_VALUES.LIGHTNING_COLLECT, l.x, l.y);
+
     l.collect();
   }
 
@@ -441,6 +460,39 @@ export class GameScene extends Phaser.Scene {
 
     this.levelComplete = true;
     this.soundGenerator.levelComplete();
+
+    // Calculate time bonus
+    const elapsed = Math.floor((Date.now() - this.gameState.levelStartTime) / 1000);
+    const remaining = Math.max(0, SCORE_VALUES.LEVEL_TIME_LIMIT - elapsed);
+    const timeBonus = remaining * SCORE_VALUES.TIME_BONUS_PER_SECOND;
+
+    if (timeBonus > 0) {
+      this.gameState.score += timeBonus;
+      // Show time bonus text
+      const bonusText = this.add.text(
+        GAME_WIDTH / 2,
+        GAME_HEIGHT / 2 - 50,
+        `AIKABONUS: +${timeBonus}`,
+        {
+          fontSize: '32px',
+          color: '#ffdd00',
+          fontFamily: 'monospace',
+          stroke: '#000000',
+          strokeThickness: 4,
+        }
+      );
+      bonusText.setOrigin(0.5);
+      bonusText.setScrollFactor(0);
+      bonusText.setDepth(100);
+
+      this.tweens.add({
+        targets: bonusText,
+        y: GAME_HEIGHT / 2 - 100,
+        alpha: 0,
+        duration: 1500,
+        ease: 'Power2',
+      });
+    }
 
     // Fade out and go to card selection
     this.cameras.main.fadeOut(500, 0, 0, 0);
@@ -456,6 +508,11 @@ export class GameScene extends Phaser.Scene {
         this.scene.start('CardSelectScene', { gameState: this.gameState });
       }
     });
+  }
+
+  private addScore(points: number, x: number, y: number): void {
+    this.gameState.score += points;
+    this.hud.showScorePopup(x, y, points);
   }
 
   private handlePlayerDeath(): void {

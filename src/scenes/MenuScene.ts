@@ -121,6 +121,8 @@ export class MenuScene extends Phaser.Scene {
       playerStats: { ...DEFAULT_PLAYER_STATS },
       collectedUpgrades: [],
       godMode: this.godMode,
+      score: 0,
+      levelStartTime: Date.now(),
     };
 
     this.scene.start('GameScene', { gameState: initialState });
