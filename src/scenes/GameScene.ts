@@ -10,6 +10,7 @@ import { getLevelData, getTotalLevels } from '../levels/levelData';
 import { GAME_WIDTH, GAME_HEIGHT, PERFORMANCE_SETTINGS } from '../config';
 import type { GameState, LevelData, FireballType } from '../types';
 import { SCORE_VALUES } from '../types';
+import { ProceduralBackground } from '../graphics/ProceduralBackground';
 
 export class GameScene extends Phaser.Scene {
   private player!: Player;
@@ -29,6 +30,7 @@ export class GameScene extends Phaser.Scene {
 
   // Parallax backgrounds
   private bgLayers: Phaser.GameObjects.TileSprite[] = [];
+  private proceduralBg: ProceduralBackground | null = null;
 
   // Particle emitters
   private sparkEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
@@ -46,6 +48,7 @@ export class GameScene extends Phaser.Scene {
     this.gameState = data.gameState;
     this.levelComplete = false;
     this.bgLayers = [];
+    this.proceduralBg = null;
     // Start level timer
     this.gameState.levelStartTime = Date.now();
   }
@@ -200,6 +203,12 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createParallaxBackground(): void {
+    // Level 5 uses procedural parallax background
+    if (this.gameState.currentLevel === 5) {
+      this.proceduralBg = new ProceduralBackground(this, this.levelData.width, 54321);
+      return;
+    }
+
     // Use loaded background image based on current level
     const bgKey = this.gameState.currentLevel <= 2 ? 'bg_scene1' : 'bg_scene2';
 
@@ -213,6 +222,12 @@ export class GameScene extends Phaser.Scene {
 
   private updateParallaxBackground(): void {
     const camX = this.cameras.main.scrollX;
+
+    // Procedural background for level 5
+    if (this.proceduralBg) {
+      this.proceduralBg.update(camX);
+      return;
+    }
 
     // Slow parallax scroll for background
     if (this.bgLayers[0]) {
