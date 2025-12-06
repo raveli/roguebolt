@@ -26,12 +26,8 @@ export const LEVELS: LevelData[] = [
       { type: 'basic', x: 500, y: 400, patrolDistance: 60 },
       { type: 'basic', x: 800, y: 300, patrolDistance: 50 },
     ],
-    lightnings: [
-      { x: 275, y: 500 },
-      { x: 525, y: 400 },
-      { x: 775, y: 300 },
-      { x: 1025, y: 400 },
-    ],
+    lightnings: [],
+    hearts: [],
     playerStart: { x: 100, y: GAME_HEIGHT - 100 },
     exit: { x: 1150, y: 186 },
   },
@@ -76,6 +72,7 @@ export const LEVELS: LevelData[] = [
       { x: 775, y: 250 },
       { x: 975, y: 150 },
     ],
+    hearts: [],
     playerStart: { x: 100, y: GAME_HEIGHT - 100 },
     exit: { x: 1175, y: 86 },
   },
@@ -128,6 +125,10 @@ export const LEVELS: LevelData[] = [
       { x: 860, y: 300 },
       { x: 1010, y: 200 },
       { x: 1150, y: 350 },
+    ],
+    hearts: [
+      { x: 660, y: 150 },  // Gauntlet section
+      { x: 1150, y: 200 }, // Final climb
     ],
     playerStart: { x: 100, y: GAME_HEIGHT - 100 },
     exit: { x: 1175, y: 36 },
@@ -219,6 +220,10 @@ export const LEVELS: LevelData[] = [
       // End zone
       { x: 3550, y: 450 },
       { x: 3700, y: 300 },
+    ],
+    hearts: [
+      { x: 1750, y: 250 },  // Middle zone climb
+      { x: 3200, y: 350 }, // Late zone
     ],
     playerStart: { x: 100, y: GAME_HEIGHT - 100 },
     exit: { x: 3725, y: 286 },
@@ -324,6 +329,10 @@ export const LEVELS: LevelData[] = [
       { x: 4370, y: 300 },
       { x: 4550, y: 200 },
       { x: 4700, y: 130 },
+    ],
+    hearts: [
+      { x: 1930, y: 180 },  // Crystal cave zone
+      { x: 3550, y: 290 },  // Ascent zone
     ],
     playerStart: { x: 100, y: GAME_HEIGHT - 100 },
     exit: { x: 4720, y: 116 },
