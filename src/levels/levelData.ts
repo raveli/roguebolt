@@ -337,6 +337,66 @@ export const LEVELS: LevelData[] = [
     playerStart: { x: 100, y: GAME_HEIGHT - 100 },
     exit: { x: 4720, y: 116 },
   },
+  // Level 6: Moving Platforms - Focus on timing jumps
+  {
+    id: 6,
+    name: 'Liikkuvat Tasanteet',
+    width: 2400,
+    height: GAME_HEIGHT,
+    platforms: [
+      // Start zone - solid ground
+      { x: 0, y: GAME_HEIGHT - 32, width: 200, height: 32 },
+
+      // Mid-level rest platform
+      { x: 600, y: 500, width: 120, height: 20 },
+
+      // Upper rest platform
+      { x: 1100, y: 350, width: 120, height: 20 },
+
+      // Final approach - solid platforms
+      { x: 1700, y: 400, width: 100, height: 20 },
+      { x: 1900, y: 300, width: 100, height: 20 },
+
+      // Exit platform
+      { x: 2150, y: 200, width: 200, height: 20 },
+    ],
+    movingPlatforms: [
+      // First set - gentle introduction (slow, short distance)
+      { x: 250, y: 550, width: 100, height: 20, moveDistance: 100, speed: 40 },
+      { x: 400, y: 480, width: 100, height: 20, moveDistance: 80, speed: 50, startMovingDown: true },
+
+      // Second set - medium difficulty
+      { x: 750, y: 420, width: 80, height: 20, moveDistance: 120, speed: 60 },
+      { x: 900, y: 350, width: 80, height: 20, moveDistance: 100, speed: 70, startMovingDown: true },
+
+      // Third set - harder (faster, longer distance)
+      { x: 1250, y: 280, width: 80, height: 20, moveDistance: 150, speed: 80 },
+      { x: 1400, y: 350, width: 80, height: 20, moveDistance: 130, speed: 90, startMovingDown: true },
+      { x: 1550, y: 280, width: 80, height: 20, moveDistance: 120, speed: 85 },
+    ],
+    enemies: [
+      // Enemies on rest platforms
+      { type: 'basic', x: 650, y: 450, patrolDistance: 40 },
+      { type: 'basic', x: 1150, y: 300, patrolDistance: 40 },
+      { type: 'basic', x: 2200, y: 150, patrolDistance: 60 },
+    ],
+    lightnings: [
+      { x: 300, y: 500 },
+      { x: 450, y: 430 },
+      { x: 800, y: 370 },
+      { x: 950, y: 300 },
+      { x: 1300, y: 230 },
+      { x: 1450, y: 300 },
+      { x: 1750, y: 350 },
+      { x: 1950, y: 250 },
+    ],
+    hearts: [
+      { x: 650, y: 450 },
+      { x: 1950, y: 250 },
+    ],
+    playerStart: { x: 100, y: GAME_HEIGHT - 100 },
+    exit: { x: 2250, y: 136 },
+  },
 ];
 
 export function getLevelData(levelNumber: number): LevelData | null {

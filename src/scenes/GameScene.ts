@@ -4,6 +4,7 @@ import { Fireball } from '../entities/Fireball';
 import { Lightning } from '../entities/Lightning';
 import { Heart } from '../entities/Heart';
 import { Enemy } from '../entities/Enemy';
+import { MovingPlatform } from '../entities/MovingPlatform';
 import { HUD } from '../ui/HUD';
 import { TouchControls } from '../ui/TouchControls';
 import { SoundGenerator } from '../audio/SoundGenerator';
@@ -16,6 +17,7 @@ import { ProceduralBackground } from '../graphics/ProceduralBackground';
 export class GameScene extends Phaser.Scene {
   private player!: Player;
   private platforms!: Phaser.Physics.Arcade.StaticGroup;
+  private movingPlatforms!: Phaser.Physics.Arcade.Group;
   private enemies!: Phaser.Physics.Arcade.Group;
   private lightnings!: Phaser.Physics.Arcade.Group;
   private hearts!: Phaser.Physics.Arcade.Group;
@@ -84,6 +86,7 @@ export class GameScene extends Phaser.Scene {
 
     // Create groups
     this.platforms = this.physics.add.staticGroup();
+    this.movingPlatforms = this.physics.add.group({ allowGravity: false });
     this.enemies = this.physics.add.group();
     this.lightnings = this.physics.add.group({ allowGravity: false });
     this.hearts = this.physics.add.group({ allowGravity: false });
@@ -107,7 +110,9 @@ export class GameScene extends Phaser.Scene {
 
     // Set up collisions
     this.physics.add.collider(this.player, this.platforms);
+    this.physics.add.collider(this.player, this.movingPlatforms);
     this.physics.add.collider(this.enemies, this.platforms);
+    this.physics.add.collider(this.enemies, this.movingPlatforms);
 
     // Player-enemy collision
     this.physics.add.overlap(
@@ -231,6 +236,11 @@ export class GameScene extends Phaser.Scene {
     // Update fireballs
     this.fireballs.getChildren().forEach((fireball) => {
       (fireball as Fireball).update();
+    });
+
+    // Update moving platforms
+    this.movingPlatforms.getChildren().forEach((platform) => {
+      (platform as MovingPlatform).update();
     });
 
     // Update HUD
@@ -365,6 +375,14 @@ export class GameScene extends Phaser.Scene {
       p.setDisplaySize(platform.width, platform.height);
       p.refreshBody();
     });
+
+    // Create moving platforms
+    if (this.levelData.movingPlatforms) {
+      this.levelData.movingPlatforms.forEach((platformData) => {
+        const movingPlatform = new MovingPlatform(this, platformData);
+        this.movingPlatforms.add(movingPlatform);
+      });
+    }
 
     // Create enemies
     this.levelData.enemies.forEach((enemyData) => {

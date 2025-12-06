@@ -15,6 +15,7 @@ export interface LevelData {
   width: number;
   height: number;
   platforms: PlatformData[];
+  movingPlatforms?: MovingPlatformData[];
   enemies: EnemyData[];
   lightnings: LightningData[];
   hearts: HeartData[];
@@ -27,6 +28,16 @@ export interface PlatformData {
   y: number;
   width: number;
   height: number;
+}
+
+export interface MovingPlatformData {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  moveDistance: number;  // How far it moves (positive = down, negative = up from start)
+  speed: number;         // Pixels per second
+  startMovingDown?: boolean;  // Start direction (default: up)
 }
 
 export interface EnemyData {
