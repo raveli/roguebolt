@@ -236,11 +236,16 @@ export class GameScene extends Phaser.Scene {
     // Update HUD
     this.hud.update(this.player.stats);
 
-    // In god mode, auto-complete level when timer runs out to prevent freeze
-    if (this.gameState.godMode) {
-      const elapsed = Math.floor((Date.now() - this.gameState.levelStartTime) / 1000);
-      if (elapsed >= SCORE_VALUES.LEVEL_TIME_LIMIT) {
+    // Check if timer ran out
+    const elapsed = Math.floor((Date.now() - this.gameState.levelStartTime) / 1000);
+    if (elapsed >= SCORE_VALUES.LEVEL_TIME_LIMIT) {
+      if (this.gameState.godMode) {
+        // God mode: auto-complete level
         this.handleExitCollision();
+      } else {
+        // Normal mode: game over
+        this.player.stats.health = 0;
+        this.handlePlayerDeath();
       }
     }
   }
