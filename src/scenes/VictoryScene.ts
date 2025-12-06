@@ -76,9 +76,9 @@ export class VictoryScene extends Phaser.Scene {
     // === SCORE CARD SECTION ===
 
     // Score card background panel
-    const cardWidth = 400;
-    const cardHeight = 200;
-    const cardY = 320;
+    const cardWidth = 500;
+    const cardHeight = 220;
+    const cardY = 310;
 
     const scoreCard = this.add.graphics();
     scoreCard.fillStyle(0x000000, 0.5);
