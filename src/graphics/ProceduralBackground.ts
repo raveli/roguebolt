@@ -16,7 +16,6 @@ const PALETTE = {
 };
 
 interface ParallaxLayer {
-  texture: Phaser.GameObjects.RenderTexture;
   tileSprite: Phaser.GameObjects.TileSprite;
   scrollFactor: number;
 }
@@ -25,6 +24,7 @@ export class ProceduralBackground {
   private scene: Phaser.Scene;
   private layers: ParallaxLayer[] = [];
   private seed: number;
+  private textureKeys: string[] = [];
 
   constructor(scene: Phaser.Scene, _levelWidth: number, seed: number = 12345) {
     this.scene = scene;
@@ -63,50 +63,45 @@ export class ProceduralBackground {
   }
 
   private createStarfield(scrollFactor: number): void {
-    const texture = this.scene.add.renderTexture(0, 0, GAME_WIDTH, GAME_HEIGHT);
-    texture.setVisible(false);
+    const textureKey = 'proc_bg_starfield';
+    const graphics = this.scene.make.graphics({ x: 0, y: 0 });
 
     // Draw gradient background
-    const graphics = this.scene.add.graphics();
     for (let y = 0; y < GAME_HEIGHT; y++) {
       const t = y / GAME_HEIGHT;
       const colorIndex = Math.min(3, Math.floor(t * 4));
       graphics.fillStyle(PALETTE.sky[colorIndex], 1);
       graphics.fillRect(0, y, GAME_WIDTH, 1);
     }
-    texture.draw(graphics);
-    graphics.destroy();
 
     // Draw stars
     this.resetSeed(this.seed);
-    const starGraphics = this.scene.add.graphics();
     for (let i = 0; i < 100; i++) {
       const x = Math.floor(this.seededRandom() * GAME_WIDTH);
-      const y = Math.floor(this.seededRandom() * GAME_HEIGHT * 0.6); // Stars only in upper portion
+      const y = Math.floor(this.seededRandom() * GAME_HEIGHT * 0.6);
       const size = this.seededRandom() < 0.8 ? 1 : 2;
       const colorIndex = Math.floor(this.seededRandom() * PALETTE.stars.length);
       const alpha = 0.3 + this.seededRandom() * 0.7;
 
-      starGraphics.fillStyle(PALETTE.stars[colorIndex], alpha);
-      starGraphics.fillRect(x, y, size, size);
+      graphics.fillStyle(PALETTE.stars[colorIndex], alpha);
+      graphics.fillRect(x, y, size, size);
     }
-    texture.draw(starGraphics);
-    starGraphics.destroy();
 
-    // Create tiling sprite
-    const tileSprite = this.scene.add.tileSprite(0, 0, GAME_WIDTH, GAME_HEIGHT, texture.texture);
+    graphics.generateTexture(textureKey, GAME_WIDTH, GAME_HEIGHT);
+    graphics.destroy();
+    this.textureKeys.push(textureKey);
+
+    const tileSprite = this.scene.add.tileSprite(0, 0, GAME_WIDTH, GAME_HEIGHT, textureKey);
     tileSprite.setOrigin(0, 0);
     tileSprite.setScrollFactor(0);
     tileSprite.setDepth(-100);
 
-    this.layers.push({ texture, tileSprite, scrollFactor });
+    this.layers.push({ tileSprite, scrollFactor });
   }
 
   private createMountainLayer(layerIndex: number, scrollFactor: number, color: number, heightFactor: number): void {
-    const texture = this.scene.add.renderTexture(0, 0, GAME_WIDTH, GAME_HEIGHT);
-    texture.setVisible(false);
-
-    const graphics = this.scene.add.graphics();
+    const textureKey = `proc_bg_mountain_${layerIndex}`;
+    const graphics = this.scene.make.graphics({ x: 0, y: 0 });
 
     // Generate mountain silhouette using simple 8-bit style peaks
     this.resetSeed(this.seed + layerIndex * 1000);
@@ -116,51 +111,45 @@ export class ProceduralBackground {
 
     graphics.fillStyle(color, 1);
 
-    // Draw pixelated mountains
     let currentY = baseY;
-    const segmentWidth = 8; // 8-pixel wide segments for chunky look
+    const segmentWidth = 8;
 
     for (let x = 0; x < GAME_WIDTH; x += segmentWidth) {
-      // Randomly adjust height
       const change = (this.seededRandom() - 0.5) * 40;
       currentY = Math.max(baseY - peakHeight, Math.min(baseY + 20, currentY + change));
 
-      // Occasional sharp peak
       if (this.seededRandom() < 0.08) {
         const peakY = currentY - 30 - this.seededRandom() * 40;
-        // Draw triangular peak (pixelated)
         for (let py = peakY; py < currentY; py += 4) {
           const width = ((currentY - py) / (currentY - peakY)) * segmentWidth * 2;
           graphics.fillRect(x + segmentWidth / 2 - width / 2, py, width, 4);
         }
       }
 
-      // Fill from current height to bottom
       graphics.fillRect(x, currentY, segmentWidth, GAME_HEIGHT - currentY);
     }
 
-    texture.draw(graphics);
+    graphics.generateTexture(textureKey, GAME_WIDTH, GAME_HEIGHT);
     graphics.destroy();
+    this.textureKeys.push(textureKey);
 
-    const tileSprite = this.scene.add.tileSprite(0, 0, GAME_WIDTH, GAME_HEIGHT, texture.texture);
+    const tileSprite = this.scene.add.tileSprite(0, 0, GAME_WIDTH, GAME_HEIGHT, textureKey);
     tileSprite.setOrigin(0, 0);
     tileSprite.setScrollFactor(0);
     tileSprite.setDepth(-90 + layerIndex * 5);
 
-    this.layers.push({ texture, tileSprite, scrollFactor });
+    this.layers.push({ tileSprite, scrollFactor });
   }
 
   private createCrystalMountainLayer(scrollFactor: number): void {
-    const texture = this.scene.add.renderTexture(0, 0, GAME_WIDTH, GAME_HEIGHT);
-    texture.setVisible(false);
+    const textureKey = 'proc_bg_crystal';
+    const graphics = this.scene.make.graphics({ x: 0, y: 0 });
 
-    const graphics = this.scene.add.graphics();
     this.resetSeed(this.seed + 3000);
 
     const baseY = GAME_HEIGHT * 0.65;
     const peakHeight = GAME_HEIGHT * 0.25;
 
-    // Draw main mountain silhouette
     graphics.fillStyle(PALETTE.mountains[2], 1);
 
     let currentY = baseY;
@@ -180,11 +169,9 @@ export class ProceduralBackground {
       const crystalWidth = 4 + Math.floor(this.seededRandom() * 4);
       const y = baseY + 20 + this.seededRandom() * (GAME_HEIGHT - baseY - 60);
 
-      // Crystal shape (pointed top)
       const colorIndex = Math.floor(this.seededRandom() * PALETTE.crystals.length);
       graphics.fillStyle(PALETTE.crystals[colorIndex], 0.8);
 
-      // Draw pixelated crystal
       for (let cy = 0; cy < crystalHeight; cy += 2) {
         const widthAtY = Math.floor(crystalWidth * (1 - cy / crystalHeight));
         if (widthAtY > 0) {
@@ -192,12 +179,11 @@ export class ProceduralBackground {
         }
       }
 
-      // Add glow around crystal
       graphics.fillStyle(PALETTE.crystals[colorIndex], 0.2);
       graphics.fillRect(x - crystalWidth, y - crystalHeight - 2, crystalWidth * 2, 2);
     }
 
-    // Add some rocky details
+    // Add rocky details
     this.resetSeed(this.seed + 5000);
     graphics.fillStyle(PALETTE.mountains[3], 0.6);
     for (let i = 0; i < 30; i++) {
@@ -207,22 +193,22 @@ export class ProceduralBackground {
       graphics.fillRect(x, y, size, size);
     }
 
-    texture.draw(graphics);
+    graphics.generateTexture(textureKey, GAME_WIDTH, GAME_HEIGHT);
     graphics.destroy();
+    this.textureKeys.push(textureKey);
 
-    const tileSprite = this.scene.add.tileSprite(0, 0, GAME_WIDTH, GAME_HEIGHT, texture.texture);
+    const tileSprite = this.scene.add.tileSprite(0, 0, GAME_WIDTH, GAME_HEIGHT, textureKey);
     tileSprite.setOrigin(0, 0);
     tileSprite.setScrollFactor(0);
     tileSprite.setDepth(-70);
 
-    this.layers.push({ texture, tileSprite, scrollFactor });
+    this.layers.push({ tileSprite, scrollFactor });
   }
 
   private createFogLayer(scrollFactor: number): void {
-    const texture = this.scene.add.renderTexture(0, 0, GAME_WIDTH, GAME_HEIGHT);
-    texture.setVisible(false);
+    const textureKey = 'proc_bg_fog';
+    const graphics = this.scene.make.graphics({ x: 0, y: 0 });
 
-    const graphics = this.scene.add.graphics();
     this.resetSeed(this.seed + 6000);
 
     // Draw wispy fog patches
@@ -232,7 +218,6 @@ export class ProceduralBackground {
       const width = 60 + Math.floor(this.seededRandom() * 100);
       const height = 8 + Math.floor(this.seededRandom() * 16);
 
-      // Multiple overlapping rectangles for cloud-like shape
       for (let j = 0; j < 5; j++) {
         const ox = (this.seededRandom() - 0.5) * width * 0.5;
         const oy = (this.seededRandom() - 0.5) * height;
@@ -244,15 +229,16 @@ export class ProceduralBackground {
       }
     }
 
-    texture.draw(graphics);
+    graphics.generateTexture(textureKey, GAME_WIDTH, GAME_HEIGHT);
     graphics.destroy();
+    this.textureKeys.push(textureKey);
 
-    const tileSprite = this.scene.add.tileSprite(0, 0, GAME_WIDTH, GAME_HEIGHT, texture.texture);
+    const tileSprite = this.scene.add.tileSprite(0, 0, GAME_WIDTH, GAME_HEIGHT, textureKey);
     tileSprite.setOrigin(0, 0);
     tileSprite.setScrollFactor(0);
     tileSprite.setDepth(-50);
 
-    this.layers.push({ texture, tileSprite, scrollFactor });
+    this.layers.push({ tileSprite, scrollFactor });
   }
 
   public update(cameraX: number): void {
@@ -265,8 +251,14 @@ export class ProceduralBackground {
   public destroy(): void {
     for (const layer of this.layers) {
       layer.tileSprite.destroy();
-      layer.texture.destroy();
+    }
+    // Remove generated textures from texture manager
+    for (const key of this.textureKeys) {
+      if (this.scene.textures.exists(key)) {
+        this.scene.textures.remove(key);
+      }
     }
     this.layers = [];
+    this.textureKeys = [];
   }
 }
