@@ -65,6 +65,7 @@ export interface GameState {
   playerStats: PlayerStats;
   collectedUpgrades: string[];
   godMode?: boolean;
+  unlimitedAmmo?: boolean;
   score: number;
   levelStartTime: number; // timestamp when level started
 }

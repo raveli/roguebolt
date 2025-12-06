@@ -4,6 +4,7 @@ import type { TouchInputState } from '../ui/TouchControls';
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   public stats: PlayerStats;
+  public unlimitedAmmo: boolean = false;
   private cursors: Phaser.Types.Input.Keyboard.CursorKeys;
   private spaceKey: Phaser.Input.Keyboard.Key;
   private isCharging: boolean = false;
@@ -117,8 +118,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     const energyCost = fireballType === 'large' ? 25 : 5;
 
-    if (this.stats.energy >= energyCost) {
-      this.stats.energy -= energyCost;
+    if (this.unlimitedAmmo || this.stats.energy >= energyCost) {
+      if (!this.unlimitedAmmo) {
+        this.stats.energy -= energyCost;
+      }
 
       const direction = this.facingRight ? 1 : -1;
       const offsetX = this.facingRight ? 20 : -20;

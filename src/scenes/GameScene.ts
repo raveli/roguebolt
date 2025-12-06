@@ -100,6 +100,11 @@ export class GameScene extends Phaser.Scene {
       this.gameState.playerStats
     );
 
+    // Set cheat flags on player
+    if (this.gameState.unlimitedAmmo) {
+      this.player.unlimitedAmmo = true;
+    }
+
     // Set up collisions
     this.physics.add.collider(this.player, this.platforms);
     this.physics.add.collider(this.enemies, this.platforms);
@@ -190,8 +195,14 @@ export class GameScene extends Phaser.Scene {
     // Update parallax backgrounds
     this.updateParallaxBackground();
 
-    // Check if player fell off the map
-    if (this.player.y > GAME_HEIGHT + 50) {
+    // Check if player fell off the map (any direction)
+    const outOfBounds =
+      this.player.y > GAME_HEIGHT + 50 ||
+      this.player.y < -100 ||
+      this.player.x < -100 ||
+      this.player.x > this.levelData.width + 100;
+
+    if (outOfBounds) {
       if (this.gameState.godMode) {
         // In god mode, teleport back to start
         this.player.setPosition(this.levelData.playerStart.x, this.levelData.playerStart.y);
@@ -224,6 +235,14 @@ export class GameScene extends Phaser.Scene {
 
     // Update HUD
     this.hud.update(this.player.stats);
+
+    // In god mode, auto-complete level when timer runs out to prevent freeze
+    if (this.gameState.godMode) {
+      const elapsed = Math.floor((Date.now() - this.gameState.levelStartTime) / 1000);
+      if (elapsed >= SCORE_VALUES.LEVEL_TIME_LIMIT) {
+        this.handleExitCollision();
+      }
+    }
   }
 
   private createParallaxBackground(): void {

@@ -7,6 +7,7 @@ export class MenuScene extends Phaser.Scene {
   private music!: Phaser.Sound.BaseSound;
   private cheatBuffer: string = '';
   private godMode: boolean = false;
+  private unlimitedAmmo: boolean = false;
   private startLevel: number = 1;
 
   constructor() {
@@ -78,9 +79,11 @@ export class MenuScene extends Phaser.Scene {
 
     // Cheat code listener
     // - "iddqd" = god mode
+    // - "idkfa" = unlimited ammo (energy)
     // - "level" + number = jump to level (e.g., "level3")
     this.cheatBuffer = '';
     this.godMode = false;
+    this.unlimitedAmmo = false;
     this.startLevel = 1;
     this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
       // Track letters and numbers
@@ -95,6 +98,12 @@ export class MenuScene extends Phaser.Scene {
         if (this.cheatBuffer.endsWith('iddqd')) {
           this.godMode = true;
           this.showCheatActivated('GOD MODE');
+        }
+
+        // Check for idkfa (unlimited ammo)
+        if (this.cheatBuffer.endsWith('idkfa')) {
+          this.unlimitedAmmo = true;
+          this.showCheatActivated('UNLIMITED AMMO');
         }
 
         // Check for level skip (e.g., "level3", "level5")
@@ -137,6 +146,7 @@ export class MenuScene extends Phaser.Scene {
       playerStats: { ...DEFAULT_PLAYER_STATS },
       collectedUpgrades: [],
       godMode: this.godMode,
+      unlimitedAmmo: this.unlimitedAmmo,
       score: 0,
       levelStartTime: Date.now(),
     };
