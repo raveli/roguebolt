@@ -17,6 +17,7 @@ export interface LevelData {
   platforms: PlatformData[];
   enemies: EnemyData[];
   lightnings: LightningData[];
+  hearts: HeartData[];
   playerStart: Position;
   exit: Position;
 }
@@ -36,6 +37,11 @@ export interface EnemyData {
 }
 
 export interface LightningData {
+  x: number;
+  y: number;
+}
+
+export interface HeartData {
   x: number;
   y: number;
 }
@@ -68,6 +74,7 @@ export const SCORE_VALUES = {
   ENEMY_KILL_SMALL: 100,    // Kill with small fireball
   ENEMY_KILL_LARGE: 250,    // Kill with charged fireball
   LIGHTNING_COLLECT: 50,     // Collect a lightning bolt
+  HEART_COLLECT: 50,         // Collect a heart
   TIME_BONUS_PER_SECOND: 10, // Points per second remaining
   LEVEL_TIME_LIMIT: 120,     // Seconds for max time bonus
 } as const;

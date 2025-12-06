@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { Player } from '../entities/Player';
 import { Fireball } from '../entities/Fireball';
 import { Lightning } from '../entities/Lightning';
+import { Heart } from '../entities/Heart';
 import { Enemy } from '../entities/Enemy';
 import { HUD } from '../ui/HUD';
 import { TouchControls } from '../ui/TouchControls';
@@ -17,6 +18,7 @@ export class GameScene extends Phaser.Scene {
   private platforms!: Phaser.Physics.Arcade.StaticGroup;
   private enemies!: Phaser.Physics.Arcade.Group;
   private lightnings!: Phaser.Physics.Arcade.Group;
+  private hearts!: Phaser.Physics.Arcade.Group;
   private fireballs!: Phaser.Physics.Arcade.Group;
   private exitPortal!: Phaser.GameObjects.Sprite;
   private hud!: HUD;
@@ -36,6 +38,7 @@ export class GameScene extends Phaser.Scene {
   private sparkEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
   private explosionEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
   private energyEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
+  private healEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
 
   // Music
   private music!: Phaser.Sound.BaseSound;
@@ -83,6 +86,7 @@ export class GameScene extends Phaser.Scene {
     this.platforms = this.physics.add.staticGroup();
     this.enemies = this.physics.add.group();
     this.lightnings = this.physics.add.group({ allowGravity: false });
+    this.hearts = this.physics.add.group({ allowGravity: false });
     this.fireballs = this.physics.add.group({ allowGravity: false });
 
     // Build level
@@ -123,6 +127,15 @@ export class GameScene extends Phaser.Scene {
       this.player,
       this.lightnings,
       this.handleLightningCollision as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
+      undefined,
+      this
+    );
+
+    // Player-heart collision
+    this.physics.add.overlap(
+      this.player,
+      this.hearts,
+      this.handleHeartCollision as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
       undefined,
       this
     );
@@ -186,6 +199,11 @@ export class GameScene extends Phaser.Scene {
     // Update lightnings (floating animation)
     this.lightnings.getChildren().forEach((lightning) => {
       (lightning as Lightning).update(time);
+    });
+
+    // Update hearts (floating animation)
+    this.hearts.getChildren().forEach((heart) => {
+      (heart as Heart).update(time);
     });
 
     // Update enemies
@@ -267,6 +285,16 @@ export class GameScene extends Phaser.Scene {
       emitting: false,
     });
     this.energyEmitter.setDepth(20);
+
+    // Heal emitter (for heart collection)
+    this.healEmitter = this.add.particles(0, 0, 'particle_pink', {
+      speed: { min: 50, max: 100 },
+      angle: { min: 0, max: 360 },
+      scale: { start: 1, end: 0 },
+      lifespan: 500,
+      emitting: false,
+    });
+    this.healEmitter.setDepth(20);
   }
 
   // Public methods for particle effects (using mobile-optimized counts)
@@ -283,6 +311,11 @@ export class GameScene extends Phaser.Scene {
   public emitEnergy(x: number, y: number, count?: number): void {
     const finalCount = count ?? PERFORMANCE_SETTINGS.energyCount;
     this.energyEmitter.emitParticleAt(x, y, finalCount);
+  }
+
+  public emitHeal(x: number, y: number, count?: number): void {
+    const finalCount = count ?? PERFORMANCE_SETTINGS.energyCount;
+    this.healEmitter.emitParticleAt(x, y, finalCount);
   }
 
   // Screen shake effect (reduced on mobile)
@@ -318,6 +351,12 @@ export class GameScene extends Phaser.Scene {
     this.levelData.lightnings.forEach((lightningData) => {
       const lightning = new Lightning(this, lightningData.x, lightningData.y);
       this.lightnings.add(lightning);
+    });
+
+    // Create hearts
+    this.levelData.hearts.forEach((heartData) => {
+      const heart = new Heart(this, heartData.x, heartData.y);
+      this.hearts.add(heart);
     });
 
     // Create exit portal
@@ -468,6 +507,28 @@ export class GameScene extends Phaser.Scene {
     this.addScore(SCORE_VALUES.LIGHTNING_COLLECT, l.x, l.y);
 
     l.collect();
+  }
+
+  private handleHeartCollision(
+    player: Phaser.GameObjects.GameObject,
+    heart: Phaser.GameObjects.GameObject
+  ): void {
+    const p = player as Player;
+    const h = heart as Heart;
+
+    // Emit heal particles
+    this.emitHeal(h.x, h.y, 15);
+
+    // Heal the player (capped at max health)
+    p.stats.health = Math.min(p.stats.maxHealth, p.stats.health + h.healAmount);
+
+    // Play collect sound (reuse energy sound)
+    this.soundGenerator.collectEnergy();
+
+    // Award score for collecting heart
+    this.addScore(SCORE_VALUES.HEART_COLLECT, h.x, h.y);
+
+    h.collect();
   }
 
   private handleExitCollision(): void {

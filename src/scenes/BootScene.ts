@@ -21,6 +21,7 @@ export class BootScene extends Phaser.Scene {
     this.load.image('bg_scene1', 'assets/sprites/bg_scene1.png');
     this.load.image('bg_scene2', 'assets/sprites/bg_scene2.png');
     this.load.image('title', 'assets/sprites/title.png');
+    this.load.image('victory_bg', 'assets/graphics/victory.jpeg');
   }
 
   create(): void {
@@ -63,6 +64,7 @@ export class BootScene extends Phaser.Scene {
     // Only particle textures and card icons are generated programmatically
     this.createParticleTextures();
     this.createCardIcons();
+    this.createHeartSprite();
   }
 
   private createCardIcons(): void {
@@ -207,6 +209,42 @@ export class BootScene extends Phaser.Scene {
     tankIcon.fillRect(16, 22, 16, 6);
     tankIcon.generateTexture('card_icon_tank', iconSize, iconSize);
     tankIcon.destroy();
+  }
+
+  private createHeartSprite(): void {
+    // Create a collectible heart sprite (32x32)
+    const size = 32;
+    const heart = this.make.graphics({ x: 0, y: 0 });
+
+    // Main heart shape - red/pink
+    heart.fillStyle(0xff4466);
+    heart.fillCircle(10, 12, 8);  // Left bump
+    heart.fillCircle(22, 12, 8);  // Right bump
+    heart.fillTriangle(2, 14, 30, 14, 16, 30);  // Bottom point
+
+    // Highlight
+    heart.fillStyle(0xff8899);
+    heart.fillCircle(8, 10, 3);
+
+    // Outline for 8-bit look
+    heart.lineStyle(2, 0xaa2244);
+    heart.beginPath();
+    heart.arc(10, 12, 8, Math.PI, Math.PI * 1.8);
+    heart.arc(22, 12, 8, Math.PI * 1.2, Math.PI * 2);
+    heart.lineTo(30, 14);
+    heart.lineTo(16, 30);
+    heart.lineTo(2, 14);
+    heart.strokePath();
+
+    heart.generateTexture('heart', size, size);
+    heart.destroy();
+
+    // Pink particle for heart collection
+    const pinkGraphics = this.make.graphics({ x: 0, y: 0 });
+    pinkGraphics.fillStyle(0xff66aa);
+    pinkGraphics.fillCircle(3, 3, 3);
+    pinkGraphics.generateTexture('particle_pink', 6, 6);
+    pinkGraphics.destroy();
   }
 
   private createParticleTextures(): void {
