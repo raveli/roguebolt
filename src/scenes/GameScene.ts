@@ -190,10 +190,16 @@ export class GameScene extends Phaser.Scene {
     // Update parallax backgrounds
     this.updateParallaxBackground();
 
-    // Check if player fell off the map (unless god mode)
-    if (this.player.y > GAME_HEIGHT + 50 && !this.gameState.godMode) {
-      this.player.stats.health = 0;
-      this.handlePlayerDeath();
+    // Check if player fell off the map
+    if (this.player.y > GAME_HEIGHT + 50) {
+      if (this.gameState.godMode) {
+        // In god mode, teleport back to start
+        this.player.setPosition(this.levelData.playerStart.x, this.levelData.playerStart.y);
+        this.player.setVelocity(0, 0);
+      } else {
+        this.player.stats.health = 0;
+        this.handlePlayerDeath();
+      }
     }
 
     // Update lightnings (floating animation)
