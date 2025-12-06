@@ -62,6 +62,14 @@ export class ProceduralBackground {
     this.createFogLayer(0.6);
   }
 
+  private safeGenerateTexture(graphics: Phaser.GameObjects.Graphics, key: string, width: number, height: number): void {
+    // Remove existing texture if it exists to prevent crashes on restart
+    if (this.scene.textures.exists(key)) {
+      this.scene.textures.remove(key);
+    }
+    graphics.generateTexture(key, width, height);
+  }
+
   private createStarfield(scrollFactor: number): void {
     const textureKey = 'proc_bg_starfield';
     const graphics = this.scene.make.graphics({ x: 0, y: 0 });
@@ -87,7 +95,7 @@ export class ProceduralBackground {
       graphics.fillRect(x, y, size, size);
     }
 
-    graphics.generateTexture(textureKey, GAME_WIDTH, GAME_HEIGHT);
+    this.safeGenerateTexture(graphics, textureKey, GAME_WIDTH, GAME_HEIGHT);
     graphics.destroy();
     this.textureKeys.push(textureKey);
 
@@ -129,7 +137,7 @@ export class ProceduralBackground {
       graphics.fillRect(x, currentY, segmentWidth, GAME_HEIGHT - currentY);
     }
 
-    graphics.generateTexture(textureKey, GAME_WIDTH, GAME_HEIGHT);
+    this.safeGenerateTexture(graphics, textureKey, GAME_WIDTH, GAME_HEIGHT);
     graphics.destroy();
     this.textureKeys.push(textureKey);
 
@@ -193,7 +201,7 @@ export class ProceduralBackground {
       graphics.fillRect(x, y, size, size);
     }
 
-    graphics.generateTexture(textureKey, GAME_WIDTH, GAME_HEIGHT);
+    this.safeGenerateTexture(graphics, textureKey, GAME_WIDTH, GAME_HEIGHT);
     graphics.destroy();
     this.textureKeys.push(textureKey);
 
@@ -229,7 +237,7 @@ export class ProceduralBackground {
       }
     }
 
-    graphics.generateTexture(textureKey, GAME_WIDTH, GAME_HEIGHT);
+    this.safeGenerateTexture(graphics, textureKey, GAME_WIDTH, GAME_HEIGHT);
     graphics.destroy();
     this.textureKeys.push(textureKey);
 

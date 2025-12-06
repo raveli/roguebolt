@@ -704,4 +704,12 @@ export class GameScene extends Phaser.Scene {
     this.scene.pause();
   }
 
+  shutdown(): void {
+    // Clean up procedural background textures to prevent crashes on restart
+    if (this.proceduralBg) {
+      this.proceduralBg.destroy();
+      this.proceduralBg = null;
+    }
+  }
+
 }
