@@ -1,19 +1,26 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH } from '../config';
 import type { GameState, PlayerStats } from '../types';
+import { SCORE_VALUES } from '../types';
 
 export class HUD {
+  private scene: Phaser.Scene;
+  private gameState: GameState;
   private healthBar: Phaser.GameObjects.Graphics;
   private energyBar: Phaser.GameObjects.Graphics;
   private healthText: Phaser.GameObjects.Text;
   private energyText: Phaser.GameObjects.Text;
   private levelText: Phaser.GameObjects.Text;
+  private scoreText: Phaser.GameObjects.Text;
+  private timerText: Phaser.GameObjects.Text;
 
   private barWidth: number = 200;
   private barHeight: number = 16;
   private padding: number = 15;
 
   constructor(scene: Phaser.Scene, gameState: GameState) {
+    this.scene = scene;
+    this.gameState = gameState;
 
     // Health label (above bar)
     this.healthText = scene.add.text(
@@ -53,9 +60,9 @@ export class HUD {
     this.energyBar.setScrollFactor(0);
     this.energyBar.setDepth(50);
 
-    // Level indicator
+    // Level indicator (top center)
     this.levelText = scene.add.text(
-      GAME_WIDTH - this.padding,
+      GAME_WIDTH / 2,
       this.padding,
       `Kenttä ${gameState.currentLevel}`,
       {
@@ -64,9 +71,39 @@ export class HUD {
         fontFamily: 'monospace',
       }
     );
-    this.levelText.setOrigin(1, 0);
+    this.levelText.setOrigin(0.5, 0);
     this.levelText.setScrollFactor(0);
     this.levelText.setDepth(50);
+
+    // Timer (below level text)
+    this.timerText = scene.add.text(
+      GAME_WIDTH / 2,
+      this.padding + 25,
+      '0:00',
+      {
+        fontSize: '24px',
+        color: '#ffdd00',
+        fontFamily: 'monospace',
+      }
+    );
+    this.timerText.setOrigin(0.5, 0);
+    this.timerText.setScrollFactor(0);
+    this.timerText.setDepth(50);
+
+    // Score (top right)
+    this.scoreText = scene.add.text(
+      GAME_WIDTH - this.padding,
+      this.padding,
+      '0',
+      {
+        fontSize: '24px',
+        color: '#ffffff',
+        fontFamily: 'monospace',
+      }
+    );
+    this.scoreText.setOrigin(1, 0);
+    this.scoreText.setScrollFactor(0);
+    this.scoreText.setDepth(50);
   }
 
   update(stats: PlayerStats): void {
@@ -110,6 +147,25 @@ export class HUD {
     // Update text with values
     this.healthText.setText(`HP: ${Math.ceil(stats.health)}/${stats.maxHealth}`);
     this.energyText.setText(`ENERGIA: ${Math.ceil(stats.energy)}/${stats.maxEnergy}`);
+
+    // Update score
+    this.scoreText.setText(`${this.gameState.score}`);
+
+    // Update timer
+    const elapsed = Math.floor((Date.now() - this.gameState.levelStartTime) / 1000);
+    const remaining = Math.max(0, SCORE_VALUES.LEVEL_TIME_LIMIT - elapsed);
+    const minutes = Math.floor(remaining / 60);
+    const seconds = remaining % 60;
+    this.timerText.setText(`${minutes}:${seconds.toString().padStart(2, '0')}`);
+
+    // Timer color changes as time runs out
+    if (remaining <= 10) {
+      this.timerText.setColor('#ff0000');
+    } else if (remaining <= 30) {
+      this.timerText.setColor('#ff8800');
+    } else {
+      this.timerText.setColor('#ffdd00');
+    }
   }
 
   destroy(): void {
@@ -118,5 +174,30 @@ export class HUD {
     this.healthText.destroy();
     this.energyText.destroy();
     this.levelText.destroy();
+    this.scoreText.destroy();
+    this.timerText.destroy();
+  }
+
+  // Show score popup animation
+  showScorePopup(x: number, y: number, points: number): void {
+    const color = points >= 200 ? '#ffff00' : '#ffffff';
+    const popup = this.scene.add.text(x, y, `+${points}`, {
+      fontSize: '20px',
+      color: color,
+      fontFamily: 'monospace',
+      stroke: '#000000',
+      strokeThickness: 3,
+    });
+    popup.setOrigin(0.5);
+    popup.setDepth(100);
+
+    this.scene.tweens.add({
+      targets: popup,
+      y: y - 50,
+      alpha: 0,
+      duration: 800,
+      ease: 'Power2',
+      onComplete: () => popup.destroy(),
+    });
   }
 }

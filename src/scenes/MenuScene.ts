@@ -1,11 +1,14 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT, DEFAULT_PLAYER_STATS } from '../config';
+import { getTotalLevels } from '../levels/levelData';
 import type { GameState } from '../types';
 
 export class MenuScene extends Phaser.Scene {
   private music!: Phaser.Sound.BaseSound;
   private cheatBuffer: string = '';
   private godMode: boolean = false;
+  private unlimitedAmmo: boolean = false;
+  private startLevel: number = 1;
 
   constructor() {
     super({ key: 'MenuScene' });
@@ -74,28 +77,50 @@ export class MenuScene extends Phaser.Scene {
       this.startGame();
     });
 
-    // Cheat code listener (iddqd = god mode)
+    // Cheat code listener
+    // - "iddqd" = god mode
+    // - "idkfa" = unlimited ammo (energy)
+    // - "level" + number = jump to level (e.g., "level3")
     this.cheatBuffer = '';
     this.godMode = false;
+    this.unlimitedAmmo = false;
+    this.startLevel = 1;
     this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
-      // Only track letter keys
-      if (event.key.length === 1 && event.key.match(/[a-z]/i)) {
+      // Track letters and numbers
+      if (event.key.length === 1 && event.key.match(/[a-z0-9]/i)) {
         this.cheatBuffer += event.key.toLowerCase();
-        // Keep only last 5 characters
-        if (this.cheatBuffer.length > 5) {
-          this.cheatBuffer = this.cheatBuffer.slice(-5);
+        // Keep only last 10 characters
+        if (this.cheatBuffer.length > 10) {
+          this.cheatBuffer = this.cheatBuffer.slice(-10);
         }
-        // Check for iddqd
-        if (this.cheatBuffer === 'iddqd') {
+
+        // Check for iddqd (god mode)
+        if (this.cheatBuffer.endsWith('iddqd')) {
           this.godMode = true;
-          this.showCheatActivated();
+          this.showCheatActivated('GOD MODE');
+        }
+
+        // Check for idkfa (unlimited ammo)
+        if (this.cheatBuffer.endsWith('idkfa')) {
+          this.unlimitedAmmo = true;
+          this.showCheatActivated('UNLIMITED AMMO');
+        }
+
+        // Check for level skip (e.g., "level3", "level5")
+        const levelMatch = this.cheatBuffer.match(/level(\d)$/);
+        if (levelMatch) {
+          const level = parseInt(levelMatch[1], 10);
+          if (level >= 1 && level <= getTotalLevels()) {
+            this.startLevel = level;
+            this.showCheatActivated(`LEVEL ${level}`);
+          }
         }
       }
     });
   }
 
-  private showCheatActivated(): void {
-    const cheatText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'GOD MODE ACTIVATED', {
+  private showCheatActivated(message: string): void {
+    const cheatText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, `${message} ACTIVATED`, {
       fontSize: '48px',
       color: '#ff0000',
       fontFamily: 'monospace',
@@ -117,10 +142,13 @@ export class MenuScene extends Phaser.Scene {
 
   private startGame(): void {
     const initialState: GameState = {
-      currentLevel: 1,
+      currentLevel: this.startLevel,
       playerStats: { ...DEFAULT_PLAYER_STATS },
       collectedUpgrades: [],
       godMode: this.godMode,
+      unlimitedAmmo: this.unlimitedAmmo,
+      score: 0,
+      levelStartTime: Date.now(),
     };
 
     this.scene.start('GameScene', { gameState: initialState });

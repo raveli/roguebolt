@@ -7,13 +7,45 @@ export interface TouchInputState {
   jump: boolean;
   shoot: boolean;
   shootJustReleased: boolean;
+  pause: boolean;
 }
+
+// Haptics helper - will use Capacitor when available
+const Haptics = {
+  impact: async (style: 'Light' | 'Medium' | 'Heavy' = 'Light') => {
+    try {
+      // Try Capacitor Haptics if available (using dynamic import for tree-shaking)
+      if ((window as any).Capacitor?.isNativePlatform?.()) {
+        const { Haptics: CapHaptics, ImpactStyle } = await import('@capacitor/haptics');
+        const impactStyle = style === 'Light' ? ImpactStyle.Light
+          : style === 'Medium' ? ImpactStyle.Medium
+          : ImpactStyle.Heavy;
+        await CapHaptics.impact({ style: impactStyle });
+      } else if (navigator.vibrate) {
+        // Fallback to basic vibration for web
+        const duration = style === 'Light' ? 10 : style === 'Medium' ? 20 : 30;
+        navigator.vibrate(duration);
+      }
+    } catch {
+      // Haptics not available, silently fail
+    }
+  }
+};
 
 // Safe area insets for notched devices (in game coordinates)
 // These are approximate values - the actual CSS safe-area-inset handles the real positioning
 const SAFE_AREA_LEFT = 50; // Extra padding for iPhone notch/Dynamic Island in landscape
 const SAFE_AREA_RIGHT = 50;
 const SAFE_AREA_BOTTOM = 20;
+
+// Button definition for hit testing
+interface ButtonDef {
+  x: number;
+  y: number;
+  radius: number;
+  key: 'left' | 'right' | 'jump' | 'shoot' | 'pause';
+  container?: Phaser.GameObjects.Container;
+}
 
 export class TouchControls {
   private scene: Phaser.Scene;
@@ -24,15 +56,21 @@ export class TouchControls {
     jump: false,
     shoot: false,
     shootJustReleased: false,
+    pause: false,
   };
 
   private leftBtn!: Phaser.GameObjects.Container;
   private rightBtn!: Phaser.GameObjects.Container;
   private jumpBtn!: Phaser.GameObjects.Container;
   private shootBtn!: Phaser.GameObjects.Container;
+  private pauseBtn!: Phaser.GameObjects.Container;
 
   private isVisible: boolean = false;
   private buttonSize: number = 70;
+
+  // Global touch tracking
+  private buttons: ButtonDef[] = [];
+  private previousState: Record<string, boolean> = {};
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -48,6 +86,7 @@ export class TouchControls {
 
     if (this.isVisible) {
       this.createButtons();
+      this.setupGlobalTouchTracking();
     }
   }
 
@@ -72,6 +111,7 @@ export class TouchControls {
     const buttonSize = this.buttonSize;
     const padding = 20;
     const bottomY = GAME_HEIGHT - buttonSize / 2 - padding - SAFE_AREA_BOTTOM;
+    const hitRadius = buttonSize / 2 + 15; // Larger hit area for easier touch
 
     // Left side - D-pad style movement (with safe area padding for notch)
     const leftX = SAFE_AREA_LEFT + padding + buttonSize / 2;
@@ -79,25 +119,26 @@ export class TouchControls {
 
     // Left button
     this.leftBtn = this.createButton(leftX, bottomY, buttonSize, '◀');
-    this.setupButtonInput(this.leftBtn, 'left');
+    this.buttons.push({ x: leftX, y: bottomY, radius: hitRadius, key: 'left', container: this.leftBtn });
 
     // Right button
     this.rightBtn = this.createButton(rightX, bottomY, buttonSize, '▶');
-    this.setupButtonInput(this.rightBtn, 'right');
+    this.buttons.push({ x: rightX, y: bottomY, radius: hitRadius, key: 'right', container: this.rightBtn });
 
     // Right side - action buttons (with safe area padding for notch)
     const actionRightX = GAME_WIDTH - SAFE_AREA_RIGHT - padding - buttonSize / 2;
     const actionLeftX = GAME_WIDTH - SAFE_AREA_RIGHT - padding - buttonSize * 1.8;
 
     // Jump button (right side, slightly higher)
+    const jumpY = bottomY - buttonSize * 0.6;
     this.jumpBtn = this.createButton(
       actionRightX,
-      bottomY - buttonSize * 0.6,
+      jumpY,
       buttonSize,
       '▲',
       0x44aa44
     );
-    this.setupButtonInput(this.jumpBtn, 'jump');
+    this.buttons.push({ x: actionRightX, y: jumpY, radius: hitRadius, key: 'jump', container: this.jumpBtn });
 
     // Shoot button (left of jump, lower)
     this.shootBtn = this.createButton(
@@ -107,13 +148,145 @@ export class TouchControls {
       '●',
       0xaa4444
     );
-    this.setupButtonInput(this.shootBtn, 'shoot');
+    this.buttons.push({ x: actionLeftX, y: bottomY, radius: hitRadius, key: 'shoot', container: this.shootBtn });
 
     // Add labels
-    this.addLabel(actionRightX, bottomY - buttonSize * 0.6 + buttonSize / 2 + 15, 'JUMP');
+    this.addLabel(actionRightX, jumpY + buttonSize / 2 + 15, 'JUMP');
     this.addLabel(actionLeftX, bottomY + buttonSize / 2 + 15, 'FIRE');
 
-    this.container.add([this.leftBtn, this.rightBtn, this.jumpBtn, this.shootBtn]);
+    // Pause button (top right)
+    const pauseSize = buttonSize * 0.6;
+    const pauseX = GAME_WIDTH - SAFE_AREA_RIGHT - padding - pauseSize / 2;
+    const pauseY = SAFE_AREA_BOTTOM + padding + pauseSize / 2;
+    this.pauseBtn = this.createButton(
+      pauseX,
+      pauseY,
+      pauseSize,
+      '❚❚',
+      0x666666
+    );
+    this.buttons.push({ x: pauseX, y: pauseY, radius: pauseSize / 2 + 10, key: 'pause', container: this.pauseBtn });
+
+    this.container.add([this.leftBtn, this.rightBtn, this.jumpBtn, this.shootBtn, this.pauseBtn]);
+  }
+
+  private setupGlobalTouchTracking(): void {
+    // Use scene update to check all pointers every frame
+    this.scene.events.on('update', this.updateTouchState, this);
+    this.scene.events.once('shutdown', () => {
+      this.scene.events.off('update', this.updateTouchState, this);
+    });
+  }
+
+  private updateTouchState(): void {
+    // Get all active pointers
+    const pointers = [
+      this.scene.input.pointer1,
+      this.scene.input.pointer2,
+      this.scene.input.pointer3,
+      this.scene.input.pointer4,
+    ];
+
+    // Track which buttons are pressed this frame
+    const pressedThisFrame: Set<string> = new Set();
+
+    // Check each active pointer against all buttons
+    for (const pointer of pointers) {
+      if (!pointer.isDown) continue;
+
+      // Convert pointer position to game coordinates (accounting for camera/scale)
+      const px = pointer.x;
+      const py = pointer.y;
+
+      // Check against each button
+      for (const btn of this.buttons) {
+        const dx = px - btn.x;
+        const dy = py - btn.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist <= btn.radius) {
+          pressedThisFrame.add(btn.key);
+        }
+      }
+    }
+
+    // Update input state and visual feedback for each button
+    for (const btn of this.buttons) {
+      const wasPressed = this.previousState[btn.key] || false;
+      const isPressed = pressedThisFrame.has(btn.key);
+
+      if (btn.key === 'pause') {
+        // Pause is special - only trigger on initial press
+        if (isPressed && !wasPressed) {
+          this.inputState.pause = true;
+          Haptics.impact('Light');
+          this.animateButtonPress(btn, true);
+        } else if (!isPressed && wasPressed) {
+          this.animateButtonPress(btn, false);
+        }
+      } else {
+        // Regular button
+        this.inputState[btn.key] = isPressed;
+
+        // Handle shoot release
+        if (btn.key === 'shoot' && wasPressed && !isPressed) {
+          this.inputState.shootJustReleased = true;
+          Haptics.impact('Heavy');
+        }
+
+        // Visual/haptic feedback on state change
+        if (isPressed && !wasPressed) {
+          Haptics.impact(btn.key === 'shoot' ? 'Medium' : 'Light');
+          this.animateButtonPress(btn, true);
+        } else if (!isPressed && wasPressed) {
+          this.animateButtonPress(btn, false);
+        }
+      }
+
+      this.previousState[btn.key] = isPressed;
+    }
+  }
+
+  private animateButtonPress(btn: ButtonDef, pressed: boolean): void {
+    if (!btn.container) return;
+
+    const bg = btn.container.getData('bg') as Phaser.GameObjects.Graphics;
+    const color = btn.container.getData('color') as number;
+    const size = btn.container.getData('size') as number;
+
+    if (pressed) {
+      // Pressed state - glow effect
+      bg.clear();
+      bg.fillStyle(0xffffff, 0.15);
+      bg.fillCircle(0, 0, size / 2 + 8);
+      bg.fillStyle(color, 0.8);
+      bg.fillCircle(0, 0, size / 2);
+      bg.lineStyle(4, 0xffffff, 0.9);
+      bg.strokeCircle(0, 0, size / 2);
+
+      this.scene.tweens.add({
+        targets: btn.container,
+        scaleX: 1.15,
+        scaleY: 1.15,
+        duration: 80,
+        ease: 'Back.easeOut',
+      });
+    } else {
+      // Normal state
+      bg.clear();
+      bg.fillStyle(color, 0.4);
+      bg.fillCircle(0, 0, size / 2);
+      bg.lineStyle(3, color, 0.8);
+      bg.strokeCircle(0, 0, size / 2);
+
+      this.scene.tweens.add({
+        targets: btn.container,
+        scaleX: 1,
+        scaleY: 1,
+        duration: 100,
+        ease: 'Back.easeIn',
+      });
+    }
   }
 
   private createButton(
@@ -141,62 +314,12 @@ export class TouchControls {
     text.setOrigin(0.5);
     text.setAlpha(0.8);
 
-    // Hit area (larger than visual)
-    const hitArea = this.scene.add.circle(0, 0, size / 2 + 10, 0x000000, 0);
-    hitArea.setInteractive();
-
-    container.add([bg, text, hitArea]);
+    container.add([bg, text]);
     container.setData('bg', bg);
     container.setData('color', color);
     container.setData('size', size);
 
     return container;
-  }
-
-  private setupButtonInput(
-    button: Phaser.GameObjects.Container,
-    inputKey: keyof Omit<TouchInputState, 'shootJustReleased'>
-  ): void {
-    const hitArea = button.getAt(2) as Phaser.GameObjects.Arc;
-    const bg = button.getData('bg') as Phaser.GameObjects.Graphics;
-    const color = button.getData('color') as number;
-    const size = button.getData('size') as number;
-
-    hitArea.on('pointerdown', () => {
-      this.inputState[inputKey] = true;
-      // Highlight effect
-      bg.clear();
-      bg.fillStyle(color, 0.7);
-      bg.fillCircle(0, 0, size / 2);
-      bg.lineStyle(4, 0xffffff, 0.9);
-      bg.strokeCircle(0, 0, size / 2);
-      button.setScale(1.1);
-    });
-
-    hitArea.on('pointerup', () => {
-      this.inputState[inputKey] = false;
-      if (inputKey === 'shoot') {
-        this.inputState.shootJustReleased = true;
-      }
-      // Reset effect
-      bg.clear();
-      bg.fillStyle(color, 0.4);
-      bg.fillCircle(0, 0, size / 2);
-      bg.lineStyle(3, color, 0.8);
-      bg.strokeCircle(0, 0, size / 2);
-      button.setScale(1);
-    });
-
-    hitArea.on('pointerout', () => {
-      this.inputState[inputKey] = false;
-      // Reset effect
-      bg.clear();
-      bg.fillStyle(color, 0.4);
-      bg.fillCircle(0, 0, size / 2);
-      bg.lineStyle(3, color, 0.8);
-      bg.strokeCircle(0, 0, size / 2);
-      button.setScale(1);
-    });
   }
 
   private addLabel(x: number, y: number, text: string): void {
@@ -216,6 +339,10 @@ export class TouchControls {
 
   public clearShootJustReleased(): void {
     this.inputState.shootJustReleased = false;
+  }
+
+  public clearPause(): void {
+    this.inputState.pause = false;
   }
 
   public isActive(): boolean {

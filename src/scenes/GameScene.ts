@@ -2,19 +2,25 @@ import Phaser from 'phaser';
 import { Player } from '../entities/Player';
 import { Fireball } from '../entities/Fireball';
 import { Lightning } from '../entities/Lightning';
+import { Heart } from '../entities/Heart';
 import { Enemy } from '../entities/Enemy';
+import { MovingPlatform } from '../entities/MovingPlatform';
 import { HUD } from '../ui/HUD';
 import { TouchControls } from '../ui/TouchControls';
 import { SoundGenerator } from '../audio/SoundGenerator';
 import { getLevelData, getTotalLevels } from '../levels/levelData';
-import { GAME_WIDTH, GAME_HEIGHT } from '../config';
+import { GAME_WIDTH, GAME_HEIGHT, PERFORMANCE_SETTINGS } from '../config';
 import type { GameState, LevelData, FireballType } from '../types';
+import { SCORE_VALUES } from '../types';
+import { ProceduralBackground } from '../graphics/ProceduralBackground';
 
 export class GameScene extends Phaser.Scene {
   private player!: Player;
   private platforms!: Phaser.Physics.Arcade.StaticGroup;
+  private movingPlatforms!: Phaser.Physics.Arcade.Group;
   private enemies!: Phaser.Physics.Arcade.Group;
   private lightnings!: Phaser.Physics.Arcade.Group;
+  private hearts!: Phaser.Physics.Arcade.Group;
   private fireballs!: Phaser.Physics.Arcade.Group;
   private exitPortal!: Phaser.GameObjects.Sprite;
   private hud!: HUD;
@@ -24,14 +30,17 @@ export class GameScene extends Phaser.Scene {
   private levelData!: LevelData;
   private levelComplete: boolean = false;
   private isInvulnerable: boolean = false;
+  private isPaused: boolean = false;
 
   // Parallax backgrounds
   private bgLayers: Phaser.GameObjects.TileSprite[] = [];
+  private proceduralBg: ProceduralBackground | null = null;
 
   // Particle emitters
   private sparkEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
   private explosionEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
   private energyEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
+  private healEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
 
   // Music
   private music!: Phaser.Sound.BaseSound;
@@ -44,6 +53,9 @@ export class GameScene extends Phaser.Scene {
     this.gameState = data.gameState;
     this.levelComplete = false;
     this.bgLayers = [];
+    this.proceduralBg = null;
+    // Start level timer
+    this.gameState.levelStartTime = Date.now();
   }
 
   create(): void {
@@ -74,8 +86,10 @@ export class GameScene extends Phaser.Scene {
 
     // Create groups
     this.platforms = this.physics.add.staticGroup();
+    this.movingPlatforms = this.physics.add.group({ allowGravity: false });
     this.enemies = this.physics.add.group();
     this.lightnings = this.physics.add.group({ allowGravity: false });
+    this.hearts = this.physics.add.group({ allowGravity: false });
     this.fireballs = this.physics.add.group({ allowGravity: false });
 
     // Build level
@@ -89,9 +103,16 @@ export class GameScene extends Phaser.Scene {
       this.gameState.playerStats
     );
 
+    // Set cheat flags on player
+    if (this.gameState.unlimitedAmmo) {
+      this.player.unlimitedAmmo = true;
+    }
+
     // Set up collisions
     this.physics.add.collider(this.player, this.platforms);
+    this.physics.add.collider(this.player, this.movingPlatforms);
     this.physics.add.collider(this.enemies, this.platforms);
+    this.physics.add.collider(this.enemies, this.movingPlatforms);
 
     // Player-enemy collision
     this.physics.add.overlap(
@@ -120,6 +141,15 @@ export class GameScene extends Phaser.Scene {
       this
     );
 
+    // Player-heart collision
+    this.physics.add.overlap(
+      this.player,
+      this.hearts,
+      this.handleHeartCollision as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
+      undefined,
+      this
+    );
+
     // Player-exit collision
     this.physics.add.overlap(
       this.player,
@@ -138,6 +168,9 @@ export class GameScene extends Phaser.Scene {
     // Set up event listeners
     this.setupEventListeners();
 
+    // Set up pause input
+    this.setupPauseInput();
+
     // Camera follow player
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
     this.cameras.main.setBounds(0, 0, this.levelData.width, this.levelData.height);
@@ -150,11 +183,16 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(time: number, delta: number): void {
-    if (this.levelComplete) return;
+    if (this.levelComplete || this.isPaused) return;
 
-    // Pass touch input to player
+    // Check for touch pause button
     if (this.touchControls.isActive()) {
-      this.player.setTouchInput(this.touchControls.getInputState());
+      const touchInput = this.touchControls.getInputState();
+      if (touchInput.pause) {
+        this.pauseGame();
+        return;
+      }
+      this.player.setTouchInput(touchInput);
     }
 
     this.player.update(delta);
@@ -162,15 +200,32 @@ export class GameScene extends Phaser.Scene {
     // Update parallax backgrounds
     this.updateParallaxBackground();
 
-    // Check if player fell off the map (unless god mode)
-    if (this.player.y > GAME_HEIGHT + 50 && !this.gameState.godMode) {
-      this.player.stats.health = 0;
-      this.handlePlayerDeath();
+    // Check if player fell off the map (any direction)
+    const outOfBounds =
+      this.player.y > GAME_HEIGHT + 50 ||
+      this.player.y < -100 ||
+      this.player.x < -100 ||
+      this.player.x > this.levelData.width + 100;
+
+    if (outOfBounds) {
+      if (this.gameState.godMode) {
+        // In god mode, teleport back to start
+        this.player.setPosition(this.levelData.playerStart.x, this.levelData.playerStart.y);
+        this.player.setVelocity(0, 0);
+      } else {
+        this.player.stats.health = 0;
+        this.handlePlayerDeath();
+      }
     }
 
     // Update lightnings (floating animation)
     this.lightnings.getChildren().forEach((lightning) => {
       (lightning as Lightning).update(time);
+    });
+
+    // Update hearts (floating animation)
+    this.hearts.getChildren().forEach((heart) => {
+      (heart as Heart).update(time);
     });
 
     // Update enemies
@@ -183,11 +238,35 @@ export class GameScene extends Phaser.Scene {
       (fireball as Fireball).update();
     });
 
+    // Update moving platforms
+    this.movingPlatforms.getChildren().forEach((platform) => {
+      (platform as MovingPlatform).update();
+    });
+
     // Update HUD
     this.hud.update(this.player.stats);
+
+    // Check if timer ran out
+    const elapsed = Math.floor((Date.now() - this.gameState.levelStartTime) / 1000);
+    if (elapsed >= SCORE_VALUES.LEVEL_TIME_LIMIT) {
+      if (this.gameState.godMode) {
+        // God mode: auto-complete level
+        this.handleExitCollision();
+      } else {
+        // Normal mode: game over
+        this.player.stats.health = 0;
+        this.handlePlayerDeath();
+      }
+    }
   }
 
   private createParallaxBackground(): void {
+    // Level 5 uses procedural parallax background
+    if (this.gameState.currentLevel === 5) {
+      this.proceduralBg = new ProceduralBackground(this, this.levelData.width, 54321);
+      return;
+    }
+
     // Use loaded background image based on current level
     const bgKey = this.gameState.currentLevel <= 2 ? 'bg_scene1' : 'bg_scene2';
 
@@ -201,6 +280,12 @@ export class GameScene extends Phaser.Scene {
 
   private updateParallaxBackground(): void {
     const camX = this.cameras.main.scrollX;
+
+    // Procedural background for level 5
+    if (this.proceduralBg) {
+      this.proceduralBg.update(camX);
+      return;
+    }
 
     // Slow parallax scroll for background
     if (this.bgLayers[0]) {
@@ -240,24 +325,43 @@ export class GameScene extends Phaser.Scene {
       emitting: false,
     });
     this.energyEmitter.setDepth(20);
+
+    // Heal emitter (for heart collection)
+    this.healEmitter = this.add.particles(0, 0, 'particle_pink', {
+      speed: { min: 50, max: 100 },
+      angle: { min: 0, max: 360 },
+      scale: { start: 1, end: 0 },
+      lifespan: 500,
+      emitting: false,
+    });
+    this.healEmitter.setDepth(20);
   }
 
-  // Public methods for particle effects
-  public emitSparks(x: number, y: number, count: number = 15): void {
-    this.sparkEmitter.emitParticleAt(x, y, count);
+  // Public methods for particle effects (using mobile-optimized counts)
+  public emitSparks(x: number, y: number, count?: number): void {
+    const finalCount = count ?? PERFORMANCE_SETTINGS.sparkCount;
+    this.sparkEmitter.emitParticleAt(x, y, finalCount);
   }
 
-  public emitExplosion(x: number, y: number, count: number = 20): void {
-    this.explosionEmitter.emitParticleAt(x, y, count);
+  public emitExplosion(x: number, y: number, count?: number): void {
+    const finalCount = count ?? PERFORMANCE_SETTINGS.explosionCount;
+    this.explosionEmitter.emitParticleAt(x, y, finalCount);
   }
 
-  public emitEnergy(x: number, y: number, count: number = 10): void {
-    this.energyEmitter.emitParticleAt(x, y, count);
+  public emitEnergy(x: number, y: number, count?: number): void {
+    const finalCount = count ?? PERFORMANCE_SETTINGS.energyCount;
+    this.energyEmitter.emitParticleAt(x, y, finalCount);
   }
 
-  // Screen shake effect
+  public emitHeal(x: number, y: number, count?: number): void {
+    const finalCount = count ?? PERFORMANCE_SETTINGS.energyCount;
+    this.healEmitter.emitParticleAt(x, y, finalCount);
+  }
+
+  // Screen shake effect (reduced on mobile)
   public screenShake(intensity: number = 5, duration: number = 150): void {
-    this.cameras.main.shake(duration, intensity / 1000);
+    const adjustedIntensity = intensity * PERFORMANCE_SETTINGS.shakeIntensity;
+    this.cameras.main.shake(duration, adjustedIntensity / 1000);
   }
 
   private buildLevel(): void {
@@ -271,6 +375,14 @@ export class GameScene extends Phaser.Scene {
       p.setDisplaySize(platform.width, platform.height);
       p.refreshBody();
     });
+
+    // Create moving platforms
+    if (this.levelData.movingPlatforms) {
+      this.levelData.movingPlatforms.forEach((platformData) => {
+        const movingPlatform = new MovingPlatform(this, platformData);
+        this.movingPlatforms.add(movingPlatform);
+      });
+    }
 
     // Create enemies
     this.levelData.enemies.forEach((enemyData) => {
@@ -287,6 +399,12 @@ export class GameScene extends Phaser.Scene {
     this.levelData.lightnings.forEach((lightningData) => {
       const lightning = new Lightning(this, lightningData.x, lightningData.y);
       this.lightnings.add(lightning);
+    });
+
+    // Create hearts
+    this.levelData.hearts.forEach((heartData) => {
+      const heart = new Heart(this, heartData.x, heartData.y);
+      this.hearts.add(heart);
     });
 
     // Create exit portal
@@ -405,7 +523,19 @@ export class GameScene extends Phaser.Scene {
       this.screenShake(5, 150);
     }
 
+    // Check if this hit will kill the enemy
+    const willKill = e.health <= f.damage;
+
     e.takeDamage(f.damage);
+
+    // Award score if enemy was killed
+    if (willKill) {
+      const points = f.fireballType === 'large'
+        ? SCORE_VALUES.ENEMY_KILL_LARGE
+        : SCORE_VALUES.ENEMY_KILL_SMALL;
+      this.addScore(points, e.x, e.y);
+    }
+
     f.destroy();
   }
 
@@ -420,7 +550,33 @@ export class GameScene extends Phaser.Scene {
     this.emitEnergy(l.x, l.y, 15);
 
     p.collectEnergy(l.energyAmount);
+
+    // Award score for collecting lightning
+    this.addScore(SCORE_VALUES.LIGHTNING_COLLECT, l.x, l.y);
+
     l.collect();
+  }
+
+  private handleHeartCollision(
+    player: Phaser.GameObjects.GameObject,
+    heart: Phaser.GameObjects.GameObject
+  ): void {
+    const p = player as Player;
+    const h = heart as Heart;
+
+    // Emit heal particles
+    this.emitHeal(h.x, h.y, 15);
+
+    // Heal the player (capped at max health)
+    p.stats.health = Math.min(p.stats.maxHealth, p.stats.health + h.healAmount);
+
+    // Play collect sound (reuse energy sound)
+    this.soundGenerator.collectEnergy();
+
+    // Award score for collecting heart
+    this.addScore(SCORE_VALUES.HEART_COLLECT, h.x, h.y);
+
+    h.collect();
   }
 
   private handleExitCollision(): void {
@@ -428,6 +584,39 @@ export class GameScene extends Phaser.Scene {
 
     this.levelComplete = true;
     this.soundGenerator.levelComplete();
+
+    // Calculate time bonus
+    const elapsed = Math.floor((Date.now() - this.gameState.levelStartTime) / 1000);
+    const remaining = Math.max(0, SCORE_VALUES.LEVEL_TIME_LIMIT - elapsed);
+    const timeBonus = remaining * SCORE_VALUES.TIME_BONUS_PER_SECOND;
+
+    if (timeBonus > 0) {
+      this.gameState.score += timeBonus;
+      // Show time bonus text
+      const bonusText = this.add.text(
+        GAME_WIDTH / 2,
+        GAME_HEIGHT / 2 - 50,
+        `AIKABONUS: +${timeBonus}`,
+        {
+          fontSize: '32px',
+          color: '#ffdd00',
+          fontFamily: 'monospace',
+          stroke: '#000000',
+          strokeThickness: 4,
+        }
+      );
+      bonusText.setOrigin(0.5);
+      bonusText.setScrollFactor(0);
+      bonusText.setDepth(100);
+
+      this.tweens.add({
+        targets: bonusText,
+        y: GAME_HEIGHT / 2 - 100,
+        alpha: 0,
+        duration: 1500,
+        ease: 'Power2',
+      });
+    }
 
     // Fade out and go to card selection
     this.cameras.main.fadeOut(500, 0, 0, 0);
@@ -443,6 +632,11 @@ export class GameScene extends Phaser.Scene {
         this.scene.start('CardSelectScene', { gameState: this.gameState });
       }
     });
+  }
+
+  private addScore(points: number, x: number, y: number): void {
+    this.gameState.score += points;
+    this.hud.showScorePopup(x, y, points);
   }
 
   private handlePlayerDeath(): void {
@@ -490,6 +684,55 @@ export class GameScene extends Phaser.Scene {
         levelText.destroy();
       },
     });
+  }
+
+  private setupPauseInput(): void {
+    // ESC key to pause
+    this.input.keyboard?.on('keydown-ESC', () => {
+      if (!this.levelComplete && !this.isPaused) {
+        this.pauseGame();
+      }
+    });
+
+    // Listen for visibility change (app backgrounded)
+    this.game.events.on('hidden', () => {
+      if (!this.levelComplete && !this.isPaused) {
+        this.pauseGame();
+      }
+    });
+
+    // Resume when coming back from pause scene
+    this.events.on('resume', () => {
+      this.isPaused = false;
+      // Resume physics and tweens
+      this.physics.resume();
+      this.tweens.resumeAll();
+      // Reset touch pause state
+      if (this.touchControls.isActive()) {
+        this.touchControls.clearPause();
+      }
+    });
+  }
+
+  private pauseGame(): void {
+    if (this.isPaused) return;
+    this.isPaused = true;
+
+    // Pause physics and tweens
+    this.physics.pause();
+    this.tweens.pauseAll();
+
+    // Launch pause scene on top
+    this.scene.launch('PauseScene', { returnScene: 'GameScene' });
+    this.scene.pause();
+  }
+
+  shutdown(): void {
+    // Clean up procedural background textures to prevent crashes on restart
+    if (this.proceduralBg) {
+      this.proceduralBg.destroy();
+      this.proceduralBg = null;
+    }
   }
 
 }

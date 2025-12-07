@@ -30,6 +30,10 @@ export class Lightning extends Phaser.Physics.Arcade.Sprite {
   }
 
   collect(): void {
+    // Disable physics body to prevent multiple collisions
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    body.enable = false;
+
     // Flash effect
     this.scene.tweens.add({
       targets: this,

@@ -26,12 +26,8 @@ export const LEVELS: LevelData[] = [
       { type: 'basic', x: 500, y: 400, patrolDistance: 60 },
       { type: 'basic', x: 800, y: 300, patrolDistance: 50 },
     ],
-    lightnings: [
-      { x: 275, y: 500 },
-      { x: 525, y: 400 },
-      { x: 775, y: 300 },
-      { x: 1025, y: 400 },
-    ],
+    lightnings: [],
+    hearts: [],
     playerStart: { x: 100, y: GAME_HEIGHT - 100 },
     exit: { x: 1150, y: 186 },
   },
@@ -76,6 +72,7 @@ export const LEVELS: LevelData[] = [
       { x: 775, y: 250 },
       { x: 975, y: 150 },
     ],
+    hearts: [],
     playerStart: { x: 100, y: GAME_HEIGHT - 100 },
     exit: { x: 1175, y: 86 },
   },
@@ -128,6 +125,10 @@ export const LEVELS: LevelData[] = [
       { x: 860, y: 300 },
       { x: 1010, y: 200 },
       { x: 1150, y: 350 },
+    ],
+    hearts: [
+      { x: 660, y: 150 },  // Gauntlet section
+      { x: 1150, y: 200 }, // Final climb
     ],
     playerStart: { x: 100, y: GAME_HEIGHT - 100 },
     exit: { x: 1175, y: 36 },
@@ -220,8 +221,181 @@ export const LEVELS: LevelData[] = [
       { x: 3550, y: 450 },
       { x: 3700, y: 300 },
     ],
+    hearts: [
+      { x: 1750, y: 250 },  // Middle zone climb
+      { x: 3200, y: 350 }, // Late zone
+    ],
     playerStart: { x: 100, y: GAME_HEIGHT - 100 },
     exit: { x: 3725, y: 286 },
+  },
+
+  // Level 5 - "The Abyss" - Long scrolling level with procedural parallax
+  {
+    id: 5,
+    name: 'Syvyys',
+    width: 4800, // 4 screens wide
+    height: GAME_HEIGHT,
+    platforms: [
+      // === START ZONE (0-600px) ===
+      { x: 0, y: GAME_HEIGHT - 32, width: 350, height: 32 },
+      { x: 200, y: 550, width: 100, height: 20 },
+      { x: 400, y: 480, width: 100, height: 20 },
+
+      // === DESCENT ZONE (600-1400px) ===
+      { x: 550, y: 580, width: 120, height: 20 },
+      { x: 720, y: GAME_HEIGHT - 32, width: 200, height: 32 },
+      { x: 750, y: 450, width: 100, height: 20 },
+      { x: 920, y: 380, width: 100, height: 20 },
+      { x: 1100, y: 320, width: 120, height: 20 },
+      { x: 1280, y: 400, width: 100, height: 20 },
+
+      // === CRYSTAL CAVE ZONE (1400-2200px) ===
+      { x: 1450, y: 520, width: 80, height: 20 },
+      { x: 1580, y: 440, width: 80, height: 20 },
+      { x: 1720, y: 360, width: 100, height: 20 },
+      { x: 1880, y: 280, width: 100, height: 20 },
+      { x: 2050, y: 360, width: 120, height: 20 },
+
+      // === UNDERGROUND LAKE ZONE (2200-3000px) ===
+      { x: 2200, y: GAME_HEIGHT - 32, width: 250, height: 32 },
+      { x: 2300, y: 480, width: 100, height: 20 },
+      { x: 2480, y: 400, width: 100, height: 20 },
+      { x: 2650, y: 320, width: 80, height: 20 },
+      { x: 2800, y: 400, width: 100, height: 20 },
+      { x: 2950, y: 500, width: 120, height: 20 },
+
+      // === ASCENT ZONE (3000-3800px) ===
+      { x: 3100, y: 580, width: 100, height: 20 },
+      { x: 3250, y: 500, width: 100, height: 20 },
+      { x: 3400, y: 420, width: 100, height: 20 },
+      { x: 3550, y: 340, width: 100, height: 20 },
+      { x: 3700, y: 260, width: 120, height: 20 },
+
+      // === FINAL ZONE (3800-4800px) ===
+      { x: 3900, y: 350, width: 150, height: 20 },
+      { x: 4100, y: GAME_HEIGHT - 32, width: 200, height: 32 },
+      { x: 4150, y: 450, width: 100, height: 20 },
+      { x: 4320, y: 350, width: 100, height: 20 },
+      { x: 4500, y: 250, width: 120, height: 20 },
+      { x: 4650, y: 180, width: 150, height: 20 },
+    ],
+    enemies: [
+      // Descent zone
+      { type: 'basic', x: 800, y: 400, patrolDistance: 40 },
+      { type: 'basic', x: 1150, y: 270, patrolDistance: 50 },
+      // Crystal cave zone
+      { type: 'basic', x: 1630, y: 390, patrolDistance: 30 },
+      { type: 'basic', x: 1930, y: 230, patrolDistance: 40 },
+      // Underground lake zone
+      { type: 'basic', x: 2350, y: 430, patrolDistance: 40 },
+      { type: 'basic', x: 2700, y: 270, patrolDistance: 30 },
+      { type: 'basic', x: 3000, y: 450, patrolDistance: 50 },
+      // Ascent zone
+      { type: 'basic', x: 3450, y: 370, patrolDistance: 40 },
+      { type: 'basic', x: 3750, y: 210, patrolDistance: 50 },
+      // Final zone
+      { type: 'basic', x: 4370, y: 300, patrolDistance: 40 },
+      { type: 'basic', x: 4550, y: 200, patrolDistance: 50 },
+    ],
+    lightnings: [
+      // Start zone
+      { x: 250, y: 500 },
+      { x: 450, y: 430 },
+      // Descent zone
+      { x: 600, y: 530 },
+      { x: 800, y: 400 },
+      { x: 970, y: 330 },
+      { x: 1160, y: 270 },
+      { x: 1330, y: 350 },
+      // Crystal cave zone
+      { x: 1500, y: 470 },
+      { x: 1770, y: 310 },
+      { x: 1930, y: 230 },
+      { x: 2100, y: 310 },
+      // Underground lake zone
+      { x: 2350, y: 430 },
+      { x: 2530, y: 350 },
+      { x: 2700, y: 270 },
+      { x: 2850, y: 350 },
+      { x: 3000, y: 450 },
+      // Ascent zone
+      { x: 3150, y: 530 },
+      { x: 3300, y: 450 },
+      { x: 3600, y: 290 },
+      { x: 3750, y: 210 },
+      // Final zone
+      { x: 3950, y: 300 },
+      { x: 4200, y: 400 },
+      { x: 4370, y: 300 },
+      { x: 4550, y: 200 },
+      { x: 4700, y: 130 },
+    ],
+    hearts: [
+      { x: 1930, y: 180 },  // Crystal cave zone
+      { x: 3550, y: 290 },  // Ascent zone
+    ],
+    playerStart: { x: 100, y: GAME_HEIGHT - 100 },
+    exit: { x: 4720, y: 116 },
+  },
+  // Level 6: Moving Platforms - Focus on timing jumps
+  {
+    id: 6,
+    name: 'Liikkuvat Tasanteet',
+    width: 2400,
+    height: GAME_HEIGHT,
+    platforms: [
+      // Start zone - solid ground
+      { x: 0, y: GAME_HEIGHT - 32, width: 200, height: 32 },
+
+      // Mid-level rest platform
+      { x: 600, y: 500, width: 120, height: 20 },
+
+      // Upper rest platform
+      { x: 1100, y: 350, width: 120, height: 20 },
+
+      // Final approach - solid platforms
+      { x: 1700, y: 400, width: 100, height: 20 },
+      { x: 1900, y: 300, width: 100, height: 20 },
+
+      // Exit platform
+      { x: 2150, y: 200, width: 200, height: 20 },
+    ],
+    movingPlatforms: [
+      // First set - gentle introduction (slow, short distance)
+      { x: 250, y: 550, width: 100, height: 20, moveDistance: 100, speed: 40 },
+      { x: 400, y: 480, width: 100, height: 20, moveDistance: 80, speed: 50, startMovingDown: true },
+
+      // Second set - medium difficulty
+      { x: 750, y: 420, width: 80, height: 20, moveDistance: 120, speed: 60 },
+      { x: 900, y: 350, width: 80, height: 20, moveDistance: 100, speed: 70, startMovingDown: true },
+
+      // Third set - harder (faster, longer distance)
+      { x: 1250, y: 280, width: 80, height: 20, moveDistance: 150, speed: 80 },
+      { x: 1400, y: 350, width: 80, height: 20, moveDistance: 130, speed: 90, startMovingDown: true },
+      { x: 1550, y: 280, width: 80, height: 20, moveDistance: 120, speed: 85 },
+    ],
+    enemies: [
+      // Enemies on rest platforms
+      { type: 'basic', x: 650, y: 450, patrolDistance: 40 },
+      { type: 'basic', x: 1150, y: 300, patrolDistance: 40 },
+      { type: 'basic', x: 2200, y: 150, patrolDistance: 60 },
+    ],
+    lightnings: [
+      { x: 300, y: 500 },
+      { x: 450, y: 430 },
+      { x: 800, y: 370 },
+      { x: 950, y: 300 },
+      { x: 1300, y: 230 },
+      { x: 1450, y: 300 },
+      { x: 1750, y: 350 },
+      { x: 1950, y: 250 },
+    ],
+    hearts: [
+      { x: 650, y: 450 },
+      { x: 1950, y: 250 },
+    ],
+    playerStart: { x: 100, y: GAME_HEIGHT - 100 },
+    exit: { x: 2250, y: 136 },
   },
 ];
 

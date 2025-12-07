@@ -15,8 +15,10 @@ export interface LevelData {
   width: number;
   height: number;
   platforms: PlatformData[];
+  movingPlatforms?: MovingPlatformData[];
   enemies: EnemyData[];
   lightnings: LightningData[];
+  hearts: HeartData[];
   playerStart: Position;
   exit: Position;
 }
@@ -28,6 +30,16 @@ export interface PlatformData {
   height: number;
 }
 
+export interface MovingPlatformData {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  moveDistance: number;  // How far it moves (positive = down, negative = up from start)
+  speed: number;         // Pixels per second
+  startMovingDown?: boolean;  // Start direction (default: up)
+}
+
 export interface EnemyData {
   type: 'basic' | 'flying';
   x: number;
@@ -36,6 +48,11 @@ export interface EnemyData {
 }
 
 export interface LightningData {
+  x: number;
+  y: number;
+}
+
+export interface HeartData {
   x: number;
   y: number;
 }
@@ -59,4 +76,17 @@ export interface GameState {
   playerStats: PlayerStats;
   collectedUpgrades: string[];
   godMode?: boolean;
+  unlimitedAmmo?: boolean;
+  score: number;
+  levelStartTime: number; // timestamp when level started
 }
+
+// Scoring constants
+export const SCORE_VALUES = {
+  ENEMY_KILL_SMALL: 100,    // Kill with small fireball
+  ENEMY_KILL_LARGE: 250,    // Kill with charged fireball
+  LIGHTNING_COLLECT: 50,     // Collect a lightning bolt
+  HEART_COLLECT: 50,         // Collect a heart
+  TIME_BONUS_PER_SECOND: 10, // Points per second remaining
+  LEVEL_TIME_LIMIT: 120,     // Seconds for max time bonus
+} as const;
