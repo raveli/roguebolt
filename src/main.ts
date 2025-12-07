@@ -39,6 +39,14 @@ const lockOrientation = async () => {
 // Create the Phaser game instance
 const game = new Phaser.Game(gameConfig);
 
+// iOS Safari sometimes needs a kick to properly size the canvas initially
+// Refresh scale after a short delay to ensure container dimensions are computed
+setTimeout(() => {
+  if (game.scale) {
+    game.scale.refresh();
+  }
+}, 100);
+
 // Handle window resize - ensure game fits properly
 window.addEventListener('resize', () => {
   // Trigger Phaser's scale manager to recalculate
