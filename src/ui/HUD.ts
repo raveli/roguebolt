@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GAME_WIDTH } from '../config';
 import type { GameState, PlayerStats } from '../types';
 import { SCORE_VALUES } from '../types';
+import { getCoins } from '../utils/coins';
 
 export class HUD {
   private scene: Phaser.Scene;
@@ -13,6 +14,8 @@ export class HUD {
   private levelText: Phaser.GameObjects.Text;
   private scoreText: Phaser.GameObjects.Text;
   private timerText: Phaser.GameObjects.Text;
+  private coinIcon: Phaser.GameObjects.Image;
+  private coinText: Phaser.GameObjects.Text;
 
   private barWidth: number = 200;
   private barHeight: number = 16;
@@ -104,6 +107,31 @@ export class HUD {
     this.scoreText.setOrigin(1, 0);
     this.scoreText.setScrollFactor(0);
     this.scoreText.setDepth(50);
+
+    // Coins count (below score, right-aligned)
+    this.coinText = scene.add.text(
+      GAME_WIDTH - this.padding,
+      this.padding + 32,
+      `${getCoins()}`,
+      {
+        fontSize: '18px',
+        color: '#ffd700',
+        fontFamily: 'monospace',
+      }
+    );
+    this.coinText.setOrigin(1, 0);
+    this.coinText.setScrollFactor(0);
+    this.coinText.setDepth(50);
+
+    // Coin icon (to the left of coin count)
+    this.coinIcon = scene.add.image(
+      GAME_WIDTH - this.padding - this.coinText.width - 16,
+      this.padding + 42,
+      'coin'
+    );
+    this.coinIcon.setDisplaySize(20, 20);
+    this.coinIcon.setScrollFactor(0);
+    this.coinIcon.setDepth(50);
   }
 
   update(stats: PlayerStats): void {
@@ -151,6 +179,11 @@ export class HUD {
     // Update score
     this.scoreText.setText(`${this.gameState.score}`);
 
+    // Update coins (reads from localStorage)
+    this.coinText.setText(`${getCoins()}`);
+    // Reposition coin icon based on text width
+    this.coinIcon.setX(GAME_WIDTH - this.padding - this.coinText.width - 16);
+
     // Update timer
     const elapsed = Math.floor((Date.now() - this.gameState.levelStartTime) / 1000);
     const remaining = Math.max(0, SCORE_VALUES.LEVEL_TIME_LIMIT - elapsed);
@@ -176,6 +209,8 @@ export class HUD {
     this.levelText.destroy();
     this.scoreText.destroy();
     this.timerText.destroy();
+    this.coinIcon.destroy();
+    this.coinText.destroy();
   }
 
   // Show score popup animation

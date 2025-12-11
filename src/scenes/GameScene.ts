@@ -13,6 +13,7 @@ import { GAME_WIDTH, GAME_HEIGHT, PERFORMANCE_SETTINGS } from '../config';
 import type { GameState, LevelData, FireballType } from '../types';
 import { SCORE_VALUES } from '../types';
 import { ProceduralBackground } from '../graphics/ProceduralBackground';
+import { calculateCoinsFromScore, addCoins } from '../utils/coins';
 
 export class GameScene extends Phaser.Scene {
   private player!: Player;
@@ -612,6 +613,36 @@ export class GameScene extends Phaser.Scene {
       this.tweens.add({
         targets: bonusText,
         y: GAME_HEIGHT / 2 - 100,
+        alpha: 0,
+        duration: 1500,
+        ease: 'Power2',
+      });
+    }
+
+    // Calculate and award coins based on current score (5 coins per 1000 points)
+    const coinsEarned = calculateCoinsFromScore(this.gameState.score);
+    if (coinsEarned > 0) {
+      addCoins(coinsEarned);
+      // Show coins earned text below time bonus
+      const coinsText = this.add.text(
+        GAME_WIDTH / 2,
+        GAME_HEIGHT / 2,
+        `+${coinsEarned} KOLIKOITA`,
+        {
+          fontSize: '28px',
+          color: '#ffd700',
+          fontFamily: 'monospace',
+          stroke: '#000000',
+          strokeThickness: 4,
+        }
+      );
+      coinsText.setOrigin(0.5);
+      coinsText.setScrollFactor(0);
+      coinsText.setDepth(100);
+
+      this.tweens.add({
+        targets: coinsText,
+        y: GAME_HEIGHT / 2 - 50,
         alpha: 0,
         duration: 1500,
         ease: 'Power2',

@@ -22,6 +22,7 @@ export class BootScene extends Phaser.Scene {
     this.load.image('bg_scene2', 'assets/sprites/bg_scene2.png');
     this.load.image('title', 'assets/sprites/title.png');
     this.load.image('victory_bg', 'assets/graphics/victory.jpeg');
+    this.load.image('coin', 'assets/graphics/coin-transparent.png');
   }
 
   create(): void {

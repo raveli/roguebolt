@@ -31,6 +31,7 @@ export class MovingPlatform extends Phaser.Physics.Arcade.Image {
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.setImmovable(true);
     body.setAllowGravity(false);
+    body.pushable = false;
 
     // Set initial velocity
     this.updateVelocity();
